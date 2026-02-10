@@ -3,8 +3,6 @@ name: Tests
 on:
   push:
     branches-ignore: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   test:
@@ -43,6 +41,14 @@ jobs:
         run: PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d medspa_test -f sql/schema.sql
 
       - name: Run tests
-        run: pytest tests/
+        run: pytest tests/ --cov-report=xml
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/medspa_test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

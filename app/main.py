@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
 
 from app.api.exception_handlers import app_exception_handler
 from app.api.routes import appointments as appointments_router
@@ -17,11 +16,6 @@ app = FastAPI(
 )
 
 app.add_exception_handler(AppException, app_exception_handler)
-
-
-@app.get("/", include_in_schema=False)
-def root():
-    return RedirectResponse(url="/docs")
 
 
 @app.get("/health")
