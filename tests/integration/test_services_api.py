@@ -84,6 +84,27 @@ def test_patch_service_success(client: TestClient, sample_service):
     assert r.json()["price"] == 7500
 
 
+def test_patch_service_updates_all_four_fields(client: TestClient, sample_service):
+    """Spec: Update a service (name, description, price, duration). All four must be updatable."""
+    r = client.patch(
+        f"/services/{sample_service.ulid}",
+        json={
+            "name": "New Name",
+            "description": "New description",
+            "price": 12000,
+            "duration": 90,
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["name"] == "New Name"
+    assert data["description"] == "New description"
+    assert data["price"] == 12000
+    assert data["duration"] == 90
+    assert data["ulid"] == sample_service.ulid
+    assert data["medspa_id"] == sample_service.medspa_id
+
+
 def test_patch_service_not_found(client: TestClient):
     r = client.patch(f"/services/{generate_ulid()}", json={"name": "X"})
     assert r.status_code == 404

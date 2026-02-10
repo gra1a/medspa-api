@@ -58,6 +58,23 @@ def test_update_service_partial(db_session: Session, sample_service: Service):
     assert s.price == sample_service.price
 
 
+def test_update_service_all_four_fields(db_session: Session, sample_service: Service):
+    """Spec: Update a service (name, description, price, duration). Service layer must apply all four."""
+    data = ServiceUpdate(
+        name="New Name",
+        description="New description",
+        price=9999,
+        duration=120,
+    )
+    s = OfferingsService.update_service(db_session, sample_service.ulid, data)
+    assert s.name == "New Name"
+    assert s.description == "New description"
+    assert s.price == 9999
+    assert s.duration == 120
+    assert s.id == sample_service.id
+    assert s.ulid == sample_service.ulid
+
+
 def test_update_service_not_found(db_session: Session):
     with pytest.raises(NotFoundError, match="Service not found"):
         OfferingsService.update_service(db_session, generate_ulid(), ServiceUpdate(name="X"))
