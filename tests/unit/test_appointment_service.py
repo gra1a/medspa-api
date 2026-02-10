@@ -20,8 +20,9 @@ def test_create_appointment_services_not_found(db_session: Session, sample_medsp
 
 
 def test_create_appointment_start_time_in_past_raises(db_session: Session, sample_medspa: Medspa, sample_service: Service):
+    """Service enforces past check for callers that bypass schema (e.g. internal APIs)."""
     start = (datetime.now(timezone.utc) - timedelta(hours=1)).replace(microsecond=0)
-    data = AppointmentCreate(start_time=start, service_ids=[sample_service.id])
+    data = AppointmentCreate.model_construct(start_time=start, service_ids=[sample_service.id])
     with pytest.raises(BadRequestError, match="start_time cannot be in the past"):
         AppointmentService.create_appointment(db_session, sample_medspa.id, data)
 
