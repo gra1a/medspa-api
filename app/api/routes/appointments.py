@@ -10,6 +10,7 @@ from app.schemas.appointments import (
     AppointmentStatus,
     AppointmentStatusUpdate,
 )
+from app.schemas.pagination import PaginatedResponse, PaginationParams, get_pagination
 from app.services.appointment_service import AppointmentService
 
 router = APIRouter()
@@ -37,11 +38,22 @@ def update_appointment_status(
     return AppointmentResponse.from_appointment(appointment)
 
 
-@router.get("/appointments", response_model=list[AppointmentResponse])
+@router.get("/appointments", response_model=PaginatedResponse[AppointmentResponse])
 def list_appointments(
     medspa_ulid: Optional[str] = Query(None),
     status: Optional[AppointmentStatus] = Query(None),
     db: Session = Depends(get_db),
+    pagination: PaginationParams = Depends(get_pagination),
 ):
-    appointments = AppointmentService.list_appointments(db, medspa_ulid=medspa_ulid, status=status)
-    return [AppointmentResponse.from_appointment(a) for a in appointments]
+    items, next_cursor = AppointmentService.list_appointments(
+        db,
+        medspa_ulid=medspa_ulid,
+        status=status,
+        cursor=pagination.cursor,
+        limit=pagination.limit,
+    )
+    return PaginatedResponse(
+        items=[AppointmentResponse.from_appointment(a) for a in items],
+        next_cursor=next_cursor,
+        limit=pagination.limit,
+    )

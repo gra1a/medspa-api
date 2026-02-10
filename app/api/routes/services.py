@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.schemas.pagination import PaginatedResponse, PaginationParams, get_pagination
 from app.schemas.services import ServiceCreate, ServiceResponse, ServiceUpdate
 from app.services.offerings_service import OfferingsService
 
@@ -20,10 +21,20 @@ def get_service(service_ulid: str, db: Session = Depends(get_db)):
     return ServiceResponse.from_service(service)
 
 
-@router.get("/medspas/{medspa_ulid}/services", response_model=list[ServiceResponse])
-def list_services(medspa_ulid: str, db: Session = Depends(get_db)):
-    services = OfferingsService.list_services_by_medspa(db, medspa_ulid)
-    return [ServiceResponse.from_service(s) for s in services]
+@router.get("/medspas/{medspa_ulid}/services", response_model=PaginatedResponse[ServiceResponse])
+def list_services(
+    medspa_ulid: str,
+    db: Session = Depends(get_db),
+    pagination: PaginationParams = Depends(get_pagination),
+):
+    items, next_cursor = OfferingsService.list_services_by_medspa(
+        db, medspa_ulid, cursor=pagination.cursor, limit=pagination.limit
+    )
+    return PaginatedResponse(
+        items=[ServiceResponse.from_service(s) for s in items],
+        next_cursor=next_cursor,
+        limit=pagination.limit,
+    )
 
 
 @router.patch("/services/{service_ulid}", response_model=ServiceResponse)

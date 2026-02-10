@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -29,9 +29,14 @@ class OfferingsService:
         return get_by_ulid(db, Service, ulid, "Service not found")
 
     @staticmethod
-    def list_services_by_medspa(db: Session, medspa_ulid: str) -> List[Service]:
+    def list_services_by_medspa(
+        db: Session, medspa_ulid: str, cursor: Optional[str] = None, limit: int = 20
+    ) -> tuple[List[Service], Optional[str]]:
         medspa = MedspaService.get_medspa(db, medspa_ulid)
-        return ServiceRepository.list_by_medspa_id(db, medspa.id)
+        raw = ServiceRepository.list_by_medspa_id(db, medspa.id, cursor=cursor, limit=limit)
+        items = raw[:limit]
+        next_cursor = items[-1].ulid if len(raw) > limit else None
+        return items, next_cursor
 
     @staticmethod
     def update_service(db: Session, service_ulid: str, data: ServiceUpdate) -> Service:

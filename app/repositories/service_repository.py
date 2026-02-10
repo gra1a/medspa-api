@@ -17,8 +17,18 @@ class ServiceRepository:
         return db.query(Service).filter(Service.ulid == ulid).first()
 
     @staticmethod
-    def list_by_medspa_id(db: Session, medspa_id: int) -> List[Service]:
-        return db.query(Service).filter(Service.medspa_id == medspa_id).all()
+    def list_by_medspa_id(
+        db: Session, medspa_id: int, cursor: Optional[str] = None, limit: int = 20
+    ) -> List[Service]:
+        """Return up to limit+1 items ordered by ulid, after cursor (exclusive)."""
+        q = (
+            db.query(Service)
+            .filter(Service.medspa_id == medspa_id)
+            .order_by(Service.ulid)
+        )
+        if cursor is not None:
+            q = q.filter(Service.ulid > cursor)
+        return q.limit(limit + 1).all()
 
     @staticmethod
     def find_by_ulids(db: Session, ulids: List[str]) -> List[Service]:

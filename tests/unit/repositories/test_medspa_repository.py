@@ -31,16 +31,34 @@ def test_get_by_ulid_not_found(db_session: Session):
     assert MedspaRepository.get_by_ulid(db_session, generate_ulid()) is None
 
 
-def test_list_all_empty(db_session: Session):
-    assert MedspaRepository.list_all(db_session) == []
+def test_list_empty(db_session: Session):
+    assert MedspaRepository.list(db_session, limit=10) == []
 
 
-def test_list_all_returns_ordered(db_session: Session, sample_medspa: Medspa):
-    medspas = MedspaRepository.list_all(db_session)
+def test_list_returns_ordered(db_session: Session, sample_medspa: Medspa):
+    medspas = MedspaRepository.list(db_session, limit=100)
     assert len(medspas) >= 1
-    assert medspas[0].id == sample_medspa.id
-    ids = [m.id for m in medspas]
-    assert ids == sorted(ids)
+    ulids = [m.ulid for m in medspas]
+    assert ulids == sorted(ulids)
+
+
+def test_list_respects_limit(db_session: Session, multiple_medspas):
+    # Repository returns up to limit+1 to detect "has next page"
+    raw = MedspaRepository.list(db_session, limit=2)
+    assert len(raw) == 3  # 2 requested + 1 extra
+    ulids = [m.ulid for m in raw]
+    assert ulids == sorted(ulids)
+
+
+def test_list_with_cursor_returns_only_after_cursor(db_session: Session, multiple_medspas):
+    all_ordered = MedspaRepository.list(db_session, limit=10)
+    assert len(all_ordered) >= 3
+    ulids = [m.ulid for m in all_ordered]
+    cursor = ulids[1]  # after second item
+    page = MedspaRepository.list(db_session, cursor=cursor, limit=10)
+    page_ulids = [m.ulid for m in page]
+    assert all(u > cursor for u in page_ulids)
+    assert ulids[2] == page_ulids[0]
 
 
 def test_add_persists_and_returns_medspa(db_session: Session):

@@ -33,26 +33,26 @@ def test_get_by_ulid_not_found(db_session: Session):
 
 
 def test_list_no_filters(db_session: Session, sample_appointment: Appointment):
-    lst = AppointmentRepository.list(db_session)
+    lst = AppointmentRepository.list(db_session, limit=20)
     assert len(lst) >= 1
     assert any(a.id == sample_appointment.id for a in lst)
 
 
 def test_list_filter_by_medspa_id(db_session: Session, sample_medspa, sample_appointment: Appointment):
-    lst = AppointmentRepository.list(db_session, medspa_id=sample_medspa.id)
+    lst = AppointmentRepository.list(db_session, medspa_id=sample_medspa.id, limit=20)
     assert len(lst) >= 1
     assert all(a.medspa_id == sample_medspa.id for a in lst)
 
 
 def test_list_filter_by_status(db_session: Session, sample_appointment: Appointment):
-    lst = AppointmentRepository.list(db_session, status="scheduled")
+    lst = AppointmentRepository.list(db_session, status="scheduled", limit=20)
     assert len(lst) >= 1
     assert all(a.status == "scheduled" for a in lst)
 
 
 def test_list_filter_by_medspa_and_status(db_session: Session, sample_medspa, sample_appointment: Appointment):
     lst = AppointmentRepository.list(
-        db_session, medspa_id=sample_medspa.id, status="scheduled"
+        db_session, medspa_id=sample_medspa.id, status="scheduled", limit=20
     )
     assert len(lst) >= 1
     assert all(
@@ -61,8 +61,7 @@ def test_list_filter_by_medspa_and_status(db_session: Session, sample_medspa, sa
 
 
 def test_list_status_filter_returns_none_when_no_match(db_session: Session, sample_medspa):
-    lst = AppointmentRepository.list(db_session, medspa_id=sample_medspa.id, status="completed")
-    # sample_appointment is "scheduled", so if that's the only one we get []
+    lst = AppointmentRepository.list(db_session, medspa_id=sample_medspa.id, status="completed", limit=20)
     assert isinstance(lst, list)
 
 

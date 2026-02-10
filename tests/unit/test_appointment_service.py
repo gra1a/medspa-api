@@ -48,12 +48,16 @@ def test_create_appointment_service_from_other_medspa(db_session: Session, sampl
 
 
 def test_list_appointments_filter_by_medspa_ulid(db_session: Session, sample_medspa: Medspa, sample_appointment):
-    result = AppointmentService.list_appointments(db_session, medspa_ulid=sample_medspa.ulid)
-    assert len(result) >= 1
-    assert all(a.medspa_id == sample_medspa.id for a in result)
+    items, _ = AppointmentService.list_appointments(
+        db_session, medspa_ulid=sample_medspa.ulid, limit=20
+    )
+    assert len(items) >= 1
+    assert all(a.medspa_id == sample_medspa.id for a in items)
 
 
 def test_list_appointments_filter_by_status(db_session: Session, sample_appointment):
-    result = AppointmentService.list_appointments(db_session, status="scheduled")
-    assert len(result) >= 1
-    assert all(a.status == "scheduled" for a in result)
+    items, _ = AppointmentService.list_appointments(
+        db_session, status="scheduled", limit=20
+    )
+    assert len(items) >= 1
+    assert all(a.status == "scheduled" for a in items)

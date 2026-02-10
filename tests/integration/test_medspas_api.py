@@ -9,15 +9,20 @@ pytestmark = pytest.mark.integration
 def test_list_medspas_empty(client: TestClient):
     r = client.get("/medspas")
     assert r.status_code == 200
-    assert isinstance(r.json(), list)
+    data = r.json()
+    assert data["items"] == []
+    assert data["next_cursor"] is None
+    assert data["limit"] == 20
 
 
 def test_list_medspas_returns_medspas(client: TestClient, sample_medspa):
     r = client.get("/medspas")
     assert r.status_code == 200
     data = r.json()
-    assert len(data) >= 1
-    assert any(m["ulid"] == sample_medspa.ulid for m in data)
+    assert len(data["items"]) >= 1
+    assert any(m["ulid"] == sample_medspa.ulid for m in data["items"])
+    assert data["limit"] == 20
+    assert "next_cursor" in data
 
 
 def test_get_medspa_success(client: TestClient, sample_medspa):
@@ -32,6 +37,47 @@ def test_get_medspa_success(client: TestClient, sample_medspa):
 def test_get_medspa_not_found(client: TestClient):
     r = client.get(f"/medspas/{generate_ulid()}")
     assert r.status_code == 404
+
+
+def test_list_medspas_pagination_multiple_pages(client: TestClient, multiple_medspas):
+    """First page has next_cursor; using it returns next page with no overlap; last page has no next_cursor."""
+    all_ulids = []
+    cursor = None
+    for _ in range(4):  # enough to exhaust 5 items with limit=2
+        params = {"limit": 2}
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = client.get("/medspas", params=params)
+        assert r.status_code == 200
+        data = r.json()
+        items = data["items"]
+        all_ulids.extend(m["ulid"] for m in items)
+        if len(items) < 2:
+            assert data["next_cursor"] is None
+            break
+        if data["next_cursor"] is not None:
+            assert data["next_cursor"] == items[-1]["ulid"]
+            cursor = data["next_cursor"]
+        else:
+            break
+    assert len(all_ulids) == 5
+    assert len(set(all_ulids)) == 5
+
+
+def test_list_medspas_pagination_limit_respected(client: TestClient, multiple_medspas):
+    r = client.get("/medspas", params={"limit": 1})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["items"]) == 1
+    assert data["limit"] == 1
+
+
+def test_list_medspas_pagination_ordered_by_ulid(client: TestClient, multiple_medspas):
+    r = client.get("/medspas", params={"limit": 10})
+    assert r.status_code == 200
+    items = r.json()["items"]
+    ulids = [m["ulid"] for m in items]
+    assert ulids == sorted(ulids)
 
 
 def test_create_medspa_success(client: TestClient):

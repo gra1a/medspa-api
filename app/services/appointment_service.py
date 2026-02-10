@@ -66,11 +66,16 @@ class AppointmentService:
         db: Session,
         medspa_ulid: Optional[str] = None,
         status: Optional[AppointmentStatus] = None,
-    ) -> List[Appointment]:
+        cursor: Optional[str] = None,
+        limit: int = 20,
+    ) -> tuple[List[Appointment], Optional[str]]:
         medspa_id = None
         if medspa_ulid is not None:
             medspa = MedspaService.get_medspa(db, medspa_ulid)
             medspa_id = medspa.id
-        return AppointmentRepository.list(
-            db, medspa_id=medspa_id, status=status
+        raw = AppointmentRepository.list(
+            db, medspa_id=medspa_id, status=status, cursor=cursor, limit=limit
         )
+        items = raw[:limit]
+        next_cursor = items[-1].ulid if len(raw) > limit else None
+        return items, next_cursor

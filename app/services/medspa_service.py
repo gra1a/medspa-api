@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -15,8 +15,13 @@ class MedspaService:
         return get_by_ulid(db, Medspa, ulid, "Medspa not found")
 
     @staticmethod
-    def list_medspas(db: Session) -> List[Medspa]:
-        return MedspaRepository.list_all(db)
+    def list_medspas(
+        db: Session, cursor: Optional[str] = None, limit: int = 20
+    ) -> Tuple[List[Medspa], Optional[str]]:
+        raw = MedspaRepository.list(db, cursor=cursor, limit=limit)
+        items = raw[:limit]
+        next_cursor = items[-1].ulid if len(raw) > limit else None
+        return items, next_cursor
 
     @staticmethod
     def create_medspa(db: Session, data: MedspaCreate) -> Medspa:

@@ -76,6 +76,26 @@ def sample_medspa(db_session):
 
 
 @pytest.fixture
+def multiple_medspas(db_session):
+    """Create 5 medspas for pagination tests. Order of creation gives ulid order."""
+    medspas = []
+    for i in range(5):
+        m = Medspa(
+            ulid=generate_ulid(),
+            name=f"MedSpa {i}",
+            address=f"Address {i}",
+            phone_number=None,
+            email=None,
+        )
+        db_session.add(m)
+        medspas.append(m)
+    db_session.commit()
+    for m in medspas:
+        db_session.refresh(m)
+    return medspas
+
+
+@pytest.fixture
 def sample_service(db_session, sample_medspa):
     s = Service(
         ulid=generate_ulid(),
@@ -141,3 +161,32 @@ def sample_appointment(db_session, sample_medspa, sample_services):
     db_session.commit()
     db_session.refresh(appt)
     return appt
+
+
+@pytest.fixture
+def multiple_appointments(db_session, sample_medspa, sample_services):
+    """Create 4 appointments for pagination tests."""
+    from datetime import datetime, timezone
+    appts = []
+    for i in range(4):
+        appt = Appointment(
+            ulid=generate_ulid(),
+            medspa_id=sample_medspa.id,
+            start_time=datetime.now(timezone.utc).replace(microsecond=0),
+            status="scheduled",
+            total_price=3000,
+            total_duration=45,
+        )
+        db_session.add(appt)
+        db_session.flush()
+        for s in sample_services:
+            db_session.execute(
+                appointment_services_table.insert().values(
+                    appointment_id=appt.id, service_id=s.id
+                )
+            )
+        appts.append(appt)
+    db_session.commit()
+    for appt in appts:
+        db_session.refresh(appt)
+    return appts

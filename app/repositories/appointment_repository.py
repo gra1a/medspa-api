@@ -21,13 +21,19 @@ class AppointmentRepository:
         db: Session,
         medspa_id: Optional[int] = None,
         status: Optional[str] = None,
+        cursor: Optional[str] = None,
+        limit: int = 20,
     ) -> List[Appointment]:
+        """Return up to limit+1 items ordered by ulid, after cursor (exclusive)."""
         q = db.query(Appointment)
         if medspa_id is not None:
             q = q.filter(Appointment.medspa_id == medspa_id)
         if status is not None:
             q = q.filter(Appointment.status == status)
-        return q.all()
+        q = q.order_by(Appointment.ulid)
+        if cursor is not None:
+            q = q.filter(Appointment.ulid > cursor)
+        return q.limit(limit + 1).all()
 
     @staticmethod
     def persist_new(db: Session, appointment: Appointment) -> Appointment:

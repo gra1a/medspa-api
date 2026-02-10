@@ -41,14 +41,20 @@ def test_get_service_not_found(db_session: Session):
 
 
 def test_list_services_empty(db_session: Session, sample_medspa: Medspa):
-    lst = OfferingsService.list_services_by_medspa(db_session, sample_medspa.ulid)
-    assert isinstance(lst, list)
+    items, next_cursor = OfferingsService.list_services_by_medspa(
+        db_session, sample_medspa.ulid, limit=20
+    )
+    assert isinstance(items, list)
+    assert next_cursor is None
+    assert items == []
 
 
 def test_list_services_by_medspa(db_session: Session, sample_medspa: Medspa, sample_service: Service):
-    lst = OfferingsService.list_services_by_medspa(db_session, sample_medspa.ulid)
-    assert len(lst) == 1
-    assert lst[0].id == sample_service.id
+    items, next_cursor = OfferingsService.list_services_by_medspa(
+        db_session, sample_medspa.ulid, limit=20
+    )
+    assert len(items) == 1
+    assert items[0].id == sample_service.id
 
 
 def test_update_service_partial(db_session: Session, sample_service: Service):

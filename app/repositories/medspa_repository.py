@@ -17,8 +17,12 @@ class MedspaRepository:
         return db.query(Medspa).filter(Medspa.ulid == ulid).first()
 
     @staticmethod
-    def list_all(db: Session) -> List[Medspa]:
-        return db.query(Medspa).order_by(Medspa.id).all()
+    def list(db: Session, cursor: Optional[str] = None, limit: int = 20) -> List[Medspa]:
+        """Return up to limit+1 items ordered by ulid, after cursor (exclusive)."""
+        q = db.query(Medspa).order_by(Medspa.ulid)
+        if cursor is not None:
+            q = q.filter(Medspa.ulid > cursor)
+        return q.limit(limit + 1).all()
 
     @staticmethod
     def persist_new(db: Session, medspa: Medspa) -> Medspa:

@@ -96,11 +96,46 @@ def test_list_appointments(client: TestClient, sample_appointment):
     r = client.get("/appointments")
     assert r.status_code == 200
     data = r.json()
-    assert len(data) >= 1
-    ulids = [a["ulid"] for a in data]
+    assert len(data["items"]) >= 1
+    ulids = [a["ulid"] for a in data["items"]]
     assert sample_appointment.ulid in ulids
+    assert "limit" in data
+    assert "next_cursor" in data
 
 
 def test_list_appointments_invalid_status_returns_422(client: TestClient):
     r = client.get("/appointments", params={"status": "invalid"})
     assert r.status_code == 422
+
+
+def test_list_appointments_pagination_multiple_pages(client: TestClient, multiple_appointments, sample_medspa):
+    """Cursor pagination: first page has next_cursor; second page no overlap; last page next_cursor None."""
+    all_ulids = []
+    cursor = None
+    for _ in range(5):
+        params = {"limit": 2, "medspa_ulid": sample_medspa.ulid}
+        if cursor is not None:
+            params["cursor"] = cursor
+        r = client.get("/appointments", params=params)
+        assert r.status_code == 200
+        data = r.json()
+        items = data["items"]
+        all_ulids.extend(a["ulid"] for a in items)
+        if len(items) < 2:
+            assert data["next_cursor"] is None
+            break
+        if data["next_cursor"] is not None:
+            assert data["next_cursor"] == items[-1]["ulid"]
+            cursor = data["next_cursor"]
+        else:
+            break
+    assert len(all_ulids) == 4
+    assert len(set(all_ulids)) == 4
+
+
+def test_list_appointments_pagination_ordered_by_ulid(client: TestClient, multiple_appointments, sample_medspa):
+    r = client.get("/appointments", params={"medspa_ulid": sample_medspa.ulid, "limit": 10})
+    assert r.status_code == 200
+    items = r.json()["items"]
+    ulids = [a["ulid"] for a in items]
+    assert ulids == sorted(ulids)

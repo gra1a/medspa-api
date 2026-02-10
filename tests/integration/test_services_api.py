@@ -63,15 +63,45 @@ def test_get_service_not_found(client: TestClient):
 def test_list_services_empty(client: TestClient, sample_medspa):
     r = client.get(f"/medspas/{sample_medspa.ulid}/services")
     assert r.status_code == 200
-    assert r.json() == []
+    data = r.json()
+    assert data["items"] == []
+    assert data["next_cursor"] is None
 
 
 def test_list_services_returns_medspa_services(client: TestClient, sample_medspa, sample_service):
     r = client.get(f"/medspas/{sample_medspa.ulid}/services")
     assert r.status_code == 200
     data = r.json()
-    assert len(data) == 1
-    assert data[0]["ulid"] == sample_service.ulid
+    assert len(data["items"]) == 1
+    assert data["items"][0]["ulid"] == sample_service.ulid
+    assert "next_cursor" in data
+
+
+def test_list_services_pagination_multiple_pages(client: TestClient, sample_medspa, sample_services):
+    """With 2 services, limit=1: first page has next_cursor; second page has 1 item and next_cursor None."""
+    r = client.get(f"/medspas/{sample_medspa.ulid}/services", params={"limit": 1})
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["items"]) == 1
+    assert data["next_cursor"] is not None
+    assert data["next_cursor"] == data["items"][0]["ulid"]
+    r2 = client.get(
+        f"/medspas/{sample_medspa.ulid}/services",
+        params={"limit": 1, "cursor": data["next_cursor"]},
+    )
+    assert r2.status_code == 200
+    data2 = r2.json()
+    assert len(data2["items"]) == 1
+    assert data2["next_cursor"] is None
+    assert data["items"][0]["ulid"] != data2["items"][0]["ulid"]
+
+
+def test_list_services_pagination_ordered_by_ulid(client: TestClient, sample_medspa, sample_services):
+    r = client.get(f"/medspas/{sample_medspa.ulid}/services", params={"limit": 10})
+    assert r.status_code == 200
+    items = r.json()["items"]
+    ulids = [s["ulid"] for s in items]
+    assert ulids == sorted(ulids)
 
 
 def test_patch_service_success(client: TestClient, sample_service):
