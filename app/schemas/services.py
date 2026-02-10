@@ -27,9 +27,8 @@ class ServiceUpdate(BaseModel):
 
 class ServiceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
-    ulid: str
-    medspa_id: int
+    id: str
+    medspa_id: str
     name: str
     description: Optional[str] = None
     price: int  # in cents

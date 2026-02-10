@@ -13,11 +13,11 @@ AppointmentStatus = Literal["scheduled", "completed", "canceled"]
 
 class AppointmentCreate(BaseModel):
     start_time: datetime
-    service_ulids: List[str] = Field(..., min_length=1)
+    service_ids: List[str] = Field(..., min_length=1)
 
-    @field_validator("service_ulids")
+    @field_validator("service_ids")
     @classmethod
-    def unique_service_ulids(cls, v: List[str]) -> List[str]:
+    def unique_service_ids(cls, v: List[str]) -> List[str]:
         return list(dict.fromkeys(v))
 
     @field_validator("start_time")
@@ -39,8 +39,7 @@ class AppointmentStatusUpdate(BaseModel):
 
 class ServiceInAppointment(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
-    ulid: str
+    id: str
     name: str
     price: int  # in cents
     duration: int
@@ -48,9 +47,8 @@ class ServiceInAppointment(BaseModel):
 
 class AppointmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
-    ulid: str
-    medspa_id: int
+    id: str
+    medspa_id: str
     start_time: datetime
     status: str
     total_price: int  # in cents
@@ -65,7 +63,6 @@ class AppointmentResponse(BaseModel):
         services = [ServiceInAppointment.model_validate(s) for s in appointment.services]
         return cls(
             id=appointment.id,
-            ulid=appointment.ulid,
             medspa_id=appointment.medspa_id,
             start_time=appointment.start_time,
             status=appointment.status,

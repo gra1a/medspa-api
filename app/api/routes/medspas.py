@@ -24,9 +24,9 @@ def list_medspas(
     )
 
 
-@router.get("/{medspa_ulid}", response_model=MedspaResponse)
-def get_medspa(medspa_ulid: str, db: Session = Depends(get_db)):
-    medspa = MedspaService.get_medspa(db, medspa_ulid)
+@router.get("/{medspa_id}", response_model=MedspaResponse)
+def get_medspa(medspa_id: str, db: Session = Depends(get_db)):
+    medspa = MedspaService.get_medspa(db, medspa_id)
     return MedspaResponse.from_medspa(medspa)
 
 
