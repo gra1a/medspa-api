@@ -1,0 +1,13 @@
+__pycache__
+*.py[cod]
+*$py.class
+.env
+.env.local
+.venv
+venv
+htmlcov
+.coverage
+.pytest_cache
+.mypy_cache
+.idea
+.cursor
