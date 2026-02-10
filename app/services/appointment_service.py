@@ -9,13 +9,13 @@ from app.repositories.appointment_repository import AppointmentRepository
 from app.repositories.service_repository import ServiceRepository
 from app.schemas.appointments import AppointmentCreate, AppointmentStatus
 from app.services.medspa_service import MedspaService
-from app.utils.query import get_by_ulid
-from app.utils.ulid import generate_ulid
+from app.utils.query import get_by_id
+from app.utils.ulid import generate_id
 
 
 class AppointmentService:
     @staticmethod
-    def create_appointment(db: Session, medspa_ulid: str, data: AppointmentCreate) -> Appointment:
+    def create_appointment(db: Session, medspa_id: str, data: AppointmentCreate) -> Appointment:
         # Enforce start_time not in past here too so callers that bypass the schema
         # (e.g. internal or admin APIs) cannot skip the rule. Schema remains canonical for API input.
         start = data.start_time
@@ -24,12 +24,12 @@ class AppointmentService:
         if start < datetime.now(timezone.utc):
             raise BadRequestError("start_time cannot be in the past")
 
-        medspa = MedspaService.get_medspa(db, medspa_ulid)
+        medspa = MedspaService.get_medspa(db, medspa_id)
 
-        services = ServiceRepository.find_by_ulids(db, data.service_ulids)
-        if len(services) != len(data.service_ulids):
-            found_ulids = {s.ulid for s in services}
-            missing = list(set(data.service_ulids) - found_ulids)
+        services = ServiceRepository.find_by_ids(db, data.service_ids)
+        if len(services) != len(data.service_ids):
+            found_ids = {s.id for s in services}
+            missing = list(set(data.service_ids) - found_ids)
             raise NotFoundError(f"Service(s) not found: {sorted(missing)}")
 
         for s in services:
@@ -40,37 +40,42 @@ class AppointmentService:
         total_duration = sum(s.duration for s in services)
 
         appointment = Appointment(
-            ulid=generate_ulid(),
+            id=generate_id(),
             medspa_id=medspa.id,
             start_time=data.start_time,
             status="scheduled",
             total_price=total_price,
             total_duration=total_duration,
         )
-        return AppointmentRepository.upsert_by_ulid_with_services(
+        return AppointmentRepository.upsert_by_id_with_services(
             db, appointment, [s.id for s in services]
         )
 
     @staticmethod
-    def get_appointment(db: Session, ulid: str) -> Appointment:
-        return get_by_ulid(db, Appointment, ulid, "Appointment not found")
+    def get_appointment(db: Session, id: str) -> Appointment:
+        return get_by_id(db, Appointment, id, "Appointment not found")
 
     @staticmethod
-    def update_status(db: Session, appointment_ulid: str, status: AppointmentStatus) -> Appointment:
-        appointment = AppointmentService.get_appointment(db, appointment_ulid)
+    def update_status(db: Session, appointment_id: str, status: AppointmentStatus) -> Appointment:
+        appointment = AppointmentService.get_appointment(db, appointment_id)
         setattr(appointment, "status", status)
-        return AppointmentRepository.upsert_by_ulid(db, appointment)
+        return AppointmentRepository.upsert_by_id(db, appointment)
 
     @staticmethod
     def list_appointments(
         db: Session,
-        medspa_ulid: Optional[str] = None,
+        medspa_id: Optional[str] = None,
         status: Optional[AppointmentStatus] = None,
-    ) -> List[Appointment]:
-        medspa_id = None
-        if medspa_ulid is not None:
-            medspa = MedspaService.get_medspa(db, medspa_ulid)
-            medspa_id = medspa.id
-        return AppointmentRepository.list(
-            db, medspa_id=medspa_id, status=status
+        cursor: Optional[str] = None,
+        limit: int = 20,
+    ) -> tuple[List[Appointment], Optional[str]]:
+        medspa_id_filter = None
+        if medspa_id is not None:
+            medspa = MedspaService.get_medspa(db, medspa_id)
+            medspa_id_filter = medspa.id
+        raw = AppointmentRepository.list(
+            db, medspa_id=medspa_id_filter, status=status, cursor=cursor, limit=limit
         )
+        items = raw[:limit]
+        next_cursor = items[-1].id if len(raw) > limit else None
+        return items, next_cursor

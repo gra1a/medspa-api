@@ -10,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db.database import Base, get_db
 from app.main import app
 from app.models.models import Medspa, Service, Appointment, appointment_services_table
-from app.utils.ulid import generate_ulid
+from app.utils.ulid import generate_id
 
 TEST_DATABASE_URL = os.environ.get(
     "DATABASE_URL",
@@ -39,7 +39,7 @@ def db_session(setup_test_db):
         # Truncate so next test has clean DB
         for table in ("appointment_services", "appointments", "services", "medspas"):
             try:
-                session.execute(text(f"TRUNCATE TABLE {table} RESTART IDENTITY CASCADE"))
+                session.execute(text(f"TRUNCATE TABLE {table} CASCADE"))
                 session.commit()
             except Exception:
                 session.rollback()
@@ -63,7 +63,7 @@ def client(db_session):
 @pytest.fixture
 def sample_medspa(db_session):
     m = Medspa(
-        ulid=generate_ulid(),
+        id=generate_id(),
         name="Test MedSpa",
         address="123 Test St",
         phone_number="555-0000",
@@ -76,9 +76,29 @@ def sample_medspa(db_session):
 
 
 @pytest.fixture
+def multiple_medspas(db_session):
+    """Create 5 medspas for pagination tests. Order of creation gives id order."""
+    medspas = []
+    for i in range(5):
+        m = Medspa(
+            id=generate_id(),
+            name=f"MedSpa {i}",
+            address=f"Address {i}",
+            phone_number=None,
+            email=None,
+        )
+        db_session.add(m)
+        medspas.append(m)
+    db_session.commit()
+    for m in medspas:
+        db_session.refresh(m)
+    return medspas
+
+
+@pytest.fixture
 def sample_service(db_session, sample_medspa):
     s = Service(
-        ulid=generate_ulid(),
+        id=generate_id(),
         medspa_id=sample_medspa.id,
         name="Test Service",
         description="A test",
@@ -95,7 +115,7 @@ def sample_service(db_session, sample_medspa):
 def sample_services(db_session, sample_medspa):
     services = [
         Service(
-            ulid=generate_ulid(),
+            id=generate_id(),
             medspa_id=sample_medspa.id,
             name="S1",
             description="",
@@ -103,7 +123,7 @@ def sample_services(db_session, sample_medspa):
             duration=15,
         ),
         Service(
-            ulid=generate_ulid(),
+            id=generate_id(),
             medspa_id=sample_medspa.id,
             name="S2",
             description="",
@@ -123,7 +143,7 @@ def sample_services(db_session, sample_medspa):
 def sample_appointment(db_session, sample_medspa, sample_services):
     from datetime import datetime, timezone
     appt = Appointment(
-        ulid=generate_ulid(),
+        id=generate_id(),
         medspa_id=sample_medspa.id,
         start_time=datetime.now(timezone.utc).replace(microsecond=0),
         status="scheduled",
@@ -141,3 +161,32 @@ def sample_appointment(db_session, sample_medspa, sample_services):
     db_session.commit()
     db_session.refresh(appt)
     return appt
+
+
+@pytest.fixture
+def multiple_appointments(db_session, sample_medspa, sample_services):
+    """Create 4 appointments for pagination tests."""
+    from datetime import datetime, timezone
+    appts = []
+    for i in range(4):
+        appt = Appointment(
+            id=generate_id(),
+            medspa_id=sample_medspa.id,
+            start_time=datetime.now(timezone.utc).replace(microsecond=0),
+            status="scheduled",
+            total_price=3000,
+            total_duration=45,
+        )
+        db_session.add(appt)
+        db_session.flush()
+        for s in sample_services:
+            db_session.execute(
+                appointment_services_table.insert().values(
+                    appointment_id=appt.id, service_id=s.id
+                )
+            )
+        appts.append(appt)
+    db_session.commit()
+    for appt in appts:
+        db_session.refresh(appt)
+    return appts

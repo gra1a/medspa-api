@@ -20,8 +20,7 @@ class MedspaCreate(MedspaBase):
 
 class MedspaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
-    ulid: str
+    id: str
     name: str
     address: Optional[str] = None
     phone_number: Optional[str] = None
