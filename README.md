@@ -210,10 +210,17 @@ curl -s -X POST http://localhost:8000/medspas/01ARZ3NDEKTSV4RRFFQ69G5FAV/appoint
 curl -s http://localhost:8000/appointments/<appointment_id>
 ```
 
-**List appointments** (optional filters: `medspa_id`, `status`)
+**List appointments** (returns all medspas when no filter; optional query params: `medspa_id`, `status`)
 
 ```bash
+curl -s "http://localhost:8000/appointments"
 curl -s "http://localhost:8000/appointments?medspa_id=01ARZ3NDEKTSV4RRFFQ69G5FAV&status=scheduled"
+```
+
+**List appointments for a medspa** (paginated; optional `status` filter)
+
+```bash
+curl -s "http://localhost:8000/medspas/01ARZ3NDEKTSV4RRFFQ69G5FAV/appointments?status=scheduled"
 ```
 
 **Update appointment status** (`scheduled` | `completed` | `canceled` per spec)

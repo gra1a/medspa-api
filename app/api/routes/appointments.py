@@ -27,6 +27,30 @@ def create_appointment(medspa_id: str, data: AppointmentCreate, db: Session = _d
     return AppointmentResponse.from_appointment(appointment)
 
 
+@router.get(
+    "/medspas/{medspa_id}/appointments",
+    response_model=PaginatedResponse[AppointmentResponse],
+)
+def list_medspa_appointments(
+    medspa_id: str,
+    status: Annotated[Optional[AppointmentStatus], Query()] = None,
+    db: Session = _depends_get_db,
+    pagination: PaginationParams = _depends_get_pagination,
+):
+    items, next_cursor = AppointmentService.list_appointments(
+        db,
+        medspa_id=medspa_id,
+        status=status,
+        cursor=pagination.cursor,
+        limit=pagination.limit,
+    )
+    return PaginatedResponse(
+        items=[AppointmentResponse.from_appointment(a) for a in items],
+        next_cursor=next_cursor,
+        limit=pagination.limit,
+    )
+
+
 @router.get("/appointments/{appointment_id}", response_model=AppointmentResponse)
 def get_appointment(appointment_id: str, db: Session = _depends_get_db):
     appointment = AppointmentService.get_appointment(db, appointment_id)
