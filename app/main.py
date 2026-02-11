@@ -27,8 +27,8 @@ app = FastAPI(
     title="MedSpa API",
     description="API for medspa services and appointments",
     version="1.0.0",
-    docs_url="/docs",       # Swagger UI
-    redoc_url="/redoc",    # ReDoc (alternative docs)
+    docs_url="/docs",  # Swagger UI
+    redoc_url="/redoc",  # ReDoc (alternative docs)
     openapi_url="/openapi.json",
     lifespan=lifespan,
 )

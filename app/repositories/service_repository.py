@@ -1,6 +1,5 @@
 """Persistence only for Service aggregate. No business rules."""
 
-
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -18,11 +17,7 @@ class ServiceRepository:
         db: Session, medspa_id: str, cursor: Optional[str] = None, limit: int = 20
     ) -> list[Service]:
         """Return up to limit+1 items ordered by id, after cursor (exclusive)."""
-        q = (
-            db.query(Service)
-            .filter(Service.medspa_id == medspa_id)
-            .order_by(Service.id)
-        )
+        q = db.query(Service).filter(Service.medspa_id == medspa_id).order_by(Service.id)
         if cursor is not None:
             q = q.filter(Service.id > cursor)
         return q.limit(limit + 1).all()

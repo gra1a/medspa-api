@@ -1,6 +1,5 @@
 """Persistence only for Medspa aggregate. No business rules."""
 
-
 from typing import Optional
 
 from sqlalchemy.orm import Session

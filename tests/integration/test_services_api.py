@@ -76,7 +76,9 @@ def test_list_services_returns_medspa_services(client: TestClient, sample_medspa
     assert "next_cursor" in data
 
 
-def test_list_services_pagination_multiple_pages(client: TestClient, sample_medspa, sample_services):
+def test_list_services_pagination_multiple_pages(
+    client: TestClient, sample_medspa, sample_services
+):
     """With 2 services, limit=1: first page has next_cursor; second page has 1 item and next_cursor None."""
     r = client.get(f"/medspas/{sample_medspa.id}/services", params={"limit": 1})
     assert r.status_code == 200

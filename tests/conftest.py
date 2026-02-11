@@ -143,6 +143,7 @@ def sample_services(db_session, sample_medspa):
 @pytest.fixture
 def sample_appointment(db_session, sample_medspa, sample_services):
     from datetime import datetime
+
     appt = Appointment(
         id=generate_id(),
         medspa_id=sample_medspa.id,
@@ -155,9 +156,7 @@ def sample_appointment(db_session, sample_medspa, sample_services):
     db_session.flush()
     for s in sample_services:
         db_session.execute(
-            appointment_services_table.insert().values(
-                appointment_id=appt.id, service_id=s.id
-            )
+            appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
         )
     db_session.commit()
     db_session.refresh(appt)
@@ -168,6 +167,7 @@ def sample_appointment(db_session, sample_medspa, sample_services):
 def multiple_appointments(db_session, sample_medspa, sample_services):
     """Create 4 appointments for pagination tests."""
     from datetime import datetime
+
     appts = []
     for _ in range(4):
         appt = Appointment(
@@ -182,9 +182,7 @@ def multiple_appointments(db_session, sample_medspa, sample_services):
         db_session.flush()
         for s in sample_services:
             db_session.execute(
-                appointment_services_table.insert().values(
-                    appointment_id=appt.id, service_id=s.id
-                )
+                appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
             )
         appts.append(appt)
     db_session.commit()

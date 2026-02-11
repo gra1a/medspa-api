@@ -68,7 +68,9 @@ def test_add_persists_and_returns_medspa(db_session: Session):
 
 def test_upsert_by_id_inserts_when_not_found(db_session: Session):
     id_val = generate_id()
-    medspa = Medspa(id=id_val, name="Upsert New", address="1 St", phone_number="111", email="a@b.com")
+    medspa = Medspa(
+        id=id_val, name="Upsert New", address="1 St", phone_number="111", email="a@b.com"
+    )
     result = MedspaRepository.upsert_by_id(db_session, medspa)
     assert result.id == id_val
     assert result.name == "Upsert New"

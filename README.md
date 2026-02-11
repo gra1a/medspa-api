@@ -105,6 +105,30 @@ tests/integration/test_services_api.py ....                    [100%]
 ==================== 47 passed in 2.34s =====================
 ```
 
+### Running linters
+
+Install dev dependencies (includes Ruff and Pyright), then run:
+
+```bash
+pip install -r requirements-dev.txt
+
+# Lint (Ruff)
+ruff check app tests
+
+# Check formatting (no changes)
+ruff format --check app tests
+
+# Type check (Pyright)
+pyright app tests
+```
+
+To auto-fix lint issues and format code:
+
+```bash
+ruff check app tests --fix
+ruff format app tests
+```
+
 ---
 
 ## API examples

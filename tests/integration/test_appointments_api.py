@@ -7,6 +7,7 @@ from app.utils.ulid import generate_id
 
 pytestmark = pytest.mark.integration
 
+
 def test_create_appointment_success(client: TestClient, sample_medspa, sample_service):
     start = (datetime.now(timezone.utc) + timedelta(days=1)).replace(microsecond=0).isoformat()
     r = client.post(
@@ -45,7 +46,9 @@ def test_create_appointment_medspa_not_found(client: TestClient, sample_service)
     assert r.status_code == 404
 
 
-def test_create_appointment_past_start_time_returns_400(client: TestClient, sample_medspa, sample_service):
+def test_create_appointment_past_start_time_returns_400(
+    client: TestClient, sample_medspa, sample_service
+):
     past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
     r = client.post(
         f"/medspas/{sample_medspa.id}/appointments",
@@ -133,7 +136,9 @@ def test_list_appointments_invalid_status_returns_422(client: TestClient):
     assert r.status_code == 422
 
 
-def test_list_appointments_pagination_multiple_pages(client: TestClient, multiple_appointments, sample_medspa):
+def test_list_appointments_pagination_multiple_pages(
+    client: TestClient, multiple_appointments, sample_medspa
+):
     """Cursor pagination: first page has next_cursor; second page no overlap; last page next_cursor None."""
     all_ids = []
     cursor = None
@@ -158,7 +163,9 @@ def test_list_appointments_pagination_multiple_pages(client: TestClient, multipl
     assert len(set(all_ids)) == 4
 
 
-def test_list_appointments_pagination_ordered_by_id(client: TestClient, multiple_appointments, sample_medspa):
+def test_list_appointments_pagination_ordered_by_id(
+    client: TestClient, multiple_appointments, sample_medspa
+):
     r = client.get("/appointments", params={"medspa_id": sample_medspa.id, "limit": 10})
     assert r.status_code == 200
     items = r.json()["items"]
@@ -181,7 +188,10 @@ def test_create_appointment_same_service_overlapping_returns_409(
         json={"start_time": start, "service_ids": [sample_service.id]},
     )
     assert r2.status_code == 409
-    assert "conflict" in r2.json().get("detail", "").lower() or "booked" in r2.json().get("detail", "").lower()
+    assert (
+        "conflict" in r2.json().get("detail", "").lower()
+        or "booked" in r2.json().get("detail", "").lower()
+    )
 
 
 def test_create_appointment_same_time_different_service_returns_201(

@@ -16,11 +16,19 @@ class Medspa(Base):
     address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     phone_number: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
-    services: Mapped[list["Service"]] = relationship("Service", back_populates="medspa", cascade="all, delete-orphan")
-    appointments: Mapped[list["Appointment"]] = relationship("Appointment", back_populates="medspa", cascade="all, delete-orphan")
+    services: Mapped[list["Service"]] = relationship(
+        "Service", back_populates="medspa", cascade="all, delete-orphan"
+    )
+    appointments: Mapped[list["Appointment"]] = relationship(
+        "Appointment", back_populates="medspa", cascade="all, delete-orphan"
+    )
 
 
 class Service(Base):
@@ -31,13 +39,19 @@ class Service(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    medspa_id: Mapped[str] = mapped_column(String(26), ForeignKey("medspas.id", ondelete="CASCADE"), nullable=False)
+    medspa_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("medspas.id", ondelete="CASCADE"), nullable=False
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False)  # in cents per spec
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     medspa: Mapped["Medspa"] = relationship("Medspa", back_populates="services")
 
@@ -46,8 +60,15 @@ class Service(Base):
 appointment_services_table = Table(
     "appointment_services",
     Base.metadata,
-    Column("appointment_id", String(26), ForeignKey("appointments.id", ondelete="CASCADE"), primary_key=True),
-    Column("service_id", String(26), ForeignKey("services.id", ondelete="RESTRICT"), primary_key=True),
+    Column(
+        "appointment_id",
+        String(26),
+        ForeignKey("appointments.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "service_id", String(26), ForeignKey("services.id", ondelete="RESTRICT"), primary_key=True
+    ),
 )
 
 
@@ -61,13 +82,21 @@ class Appointment(Base):
     )
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    medspa_id: Mapped[str] = mapped_column(String(26), ForeignKey("medspas.id", ondelete="CASCADE"), nullable=False)
+    medspa_id: Mapped[str] = mapped_column(
+        String(26), ForeignKey("medspas.id", ondelete="CASCADE"), nullable=False
+    )
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
-    total_price: Mapped[int] = mapped_column(Integer, nullable=False)  # in cents, derived from services
+    total_price: Mapped[int] = mapped_column(
+        Integer, nullable=False
+    )  # in cents, derived from services
     total_duration: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
     medspa: Mapped["Medspa"] = relationship("Medspa", back_populates="appointments")
     services: Mapped[list["Service"]] = relationship(

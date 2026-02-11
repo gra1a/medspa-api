@@ -19,7 +19,9 @@ def test_create_appointment_services_not_found(db_session: Session, sample_medsp
         AppointmentService.create_appointment(db_session, sample_medspa.id, data)
 
 
-def test_create_appointment_start_time_in_past_raises(db_session: Session, sample_medspa: Medspa, sample_service: Service):
+def test_create_appointment_start_time_in_past_raises(
+    db_session: Session, sample_medspa: Medspa, sample_service: Service
+):
     """Service enforces past check for callers that bypass schema (e.g. internal APIs)."""
     start = (datetime.now(timezone.utc) - timedelta(hours=1)).replace(microsecond=0)
     data = AppointmentCreate.model_construct(start_time=start, service_ids=[sample_service.id])
@@ -39,7 +41,9 @@ def test_create_appointment_naive_start_time_treated_as_utc(
     assert appointment.medspa_id == sample_medspa.id
 
 
-def test_create_appointment_service_from_other_medspa(db_session: Session, sample_medspa: Medspa, sample_service: Service):
+def test_create_appointment_service_from_other_medspa(
+    db_session: Session, sample_medspa: Medspa, sample_service: Service
+):
     other_medspa = Medspa(
         id=generate_id(),
         name="Other MedSpa",
@@ -67,7 +71,9 @@ def test_create_appointment_service_from_other_medspa(db_session: Session, sampl
         AppointmentService.create_appointment(db_session, sample_medspa.id, data)
 
 
-def test_list_appointments_filter_by_medspa_id(db_session: Session, sample_medspa: Medspa, sample_appointment):
+def test_list_appointments_filter_by_medspa_id(
+    db_session: Session, sample_medspa: Medspa, sample_appointment
+):
     items, _ = AppointmentService.list_appointments(
         db_session, medspa_id=sample_medspa.id, limit=20
     )
@@ -76,9 +82,7 @@ def test_list_appointments_filter_by_medspa_id(db_session: Session, sample_medsp
 
 
 def test_list_appointments_filter_by_status(db_session: Session, sample_appointment):
-    items, _ = AppointmentService.list_appointments(
-        db_session, status="scheduled", limit=20
-    )
+    items, _ = AppointmentService.list_appointments(db_session, status="scheduled", limit=20)
     assert len(items) >= 1
     assert all(a.status == "scheduled" for a in items)
 
@@ -124,17 +128,13 @@ def test_create_appointment_raises_conflict_when_same_service_overlapping_window
         AppointmentService.create_appointment(db_session, sample_medspa.id, data)
 
 
-def test_update_status_scheduled_to_completed_succeeds(
-    db_session: Session, sample_appointment
-):
+def test_update_status_scheduled_to_completed_succeeds(db_session: Session, sample_appointment):
     """Valid transition: scheduled -> completed."""
     result = AppointmentService.update_status(db_session, sample_appointment.id, "completed")
     assert result.status == "completed"
 
 
-def test_update_status_scheduled_to_canceled_succeeds(
-    db_session: Session, sample_appointment
-):
+def test_update_status_scheduled_to_canceled_succeeds(db_session: Session, sample_appointment):
     """Valid transition: scheduled -> canceled."""
     result = AppointmentService.update_status(db_session, sample_appointment.id, "canceled")
     assert result.status == "canceled"

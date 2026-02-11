@@ -27,7 +27,9 @@ def test_list_no_filters(db_session: Session, sample_appointment: Appointment):
     assert any(a.id == sample_appointment.id for a in lst)
 
 
-def test_list_filter_by_medspa_id(db_session: Session, sample_medspa, sample_appointment: Appointment):
+def test_list_filter_by_medspa_id(
+    db_session: Session, sample_medspa, sample_appointment: Appointment
+):
     lst = AppointmentRepository.list(db_session, medspa_id=sample_medspa.id, limit=20)
     assert len(lst) >= 1
     assert all(a.medspa_id == sample_medspa.id for a in lst)
@@ -39,18 +41,20 @@ def test_list_filter_by_status(db_session: Session, sample_appointment: Appointm
     assert all(a.status == "scheduled" for a in lst)
 
 
-def test_list_filter_by_medspa_and_status(db_session: Session, sample_medspa, sample_appointment: Appointment):
+def test_list_filter_by_medspa_and_status(
+    db_session: Session, sample_medspa, sample_appointment: Appointment
+):
     lst = AppointmentRepository.list(
         db_session, medspa_id=sample_medspa.id, status="scheduled", limit=20
     )
     assert len(lst) >= 1
-    assert all(
-        a.medspa_id == sample_medspa.id and a.status == "scheduled" for a in lst
-    )
+    assert all(a.medspa_id == sample_medspa.id and a.status == "scheduled" for a in lst)
 
 
 def test_list_status_filter_returns_none_when_no_match(db_session: Session, sample_medspa):
-    lst = AppointmentRepository.list(db_session, medspa_id=sample_medspa.id, status="completed", limit=20)
+    lst = AppointmentRepository.list(
+        db_session, medspa_id=sample_medspa.id, status="completed", limit=20
+    )
     assert isinstance(lst, list)
 
 
@@ -71,7 +75,9 @@ def test_upsert_by_id_inserts_appointment(db_session: Session, sample_medspa):
     assert got.total_price == 10000
 
 
-def test_upsert_by_id_with_services_inserts_appointment_and_links(db_session: Session, sample_medspa, sample_services):
+def test_upsert_by_id_with_services_inserts_appointment_and_links(
+    db_session: Session, sample_medspa, sample_services
+):
     appointment = Appointment(
         id=generate_id(),
         medspa_id=sample_medspa.id,
@@ -116,9 +122,7 @@ def test_find_scheduled_overlapping_returns_nothing_when_no_overlap(
     db_session.flush()
     for s in sample_services:
         db_session.execute(
-            appointment_services_table.insert().values(
-                appointment_id=appt.id, service_id=s.id
-            )
+            appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
         )
     db_session.commit()
     db_session.refresh(appt)
@@ -148,9 +152,7 @@ def test_find_scheduled_overlapping_returns_appointment_when_same_service_overla
     db_session.flush()
     for s in sample_services:
         db_session.execute(
-            appointment_services_table.insert().values(
-                appointment_id=appt.id, service_id=s.id
-            )
+            appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
         )
     db_session.commit()
     db_session.refresh(appt)
@@ -180,9 +182,7 @@ def test_find_scheduled_overlapping_returns_nothing_when_appointment_completed(
     db_session.flush()
     for s in sample_services:
         db_session.execute(
-            appointment_services_table.insert().values(
-                appointment_id=appt.id, service_id=s.id
-            )
+            appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
         )
     db_session.commit()
     db_session.refresh(appt)
@@ -211,9 +211,7 @@ def test_find_scheduled_overlapping_returns_nothing_when_appointment_canceled(
     db_session.flush()
     for s in sample_services:
         db_session.execute(
-            appointment_services_table.insert().values(
-                appointment_id=appt.id, service_id=s.id
-            )
+            appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
         )
     db_session.commit()
     db_session.refresh(appt)
@@ -282,9 +280,7 @@ def test_find_scheduled_overlapping_two_services_overlap_on_one(
     db_session.flush()
     for s in sample_services:
         db_session.execute(
-            appointment_services_table.insert().values(
-                appointment_id=appt.id, service_id=s.id
-            )
+            appointment_services_table.insert().values(appointment_id=appt.id, service_id=s.id)
         )
     db_session.commit()
     db_session.refresh(appt)

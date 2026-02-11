@@ -19,7 +19,9 @@ _depends_get_db = Depends(get_db)
 _depends_get_pagination = Depends(get_pagination)
 
 
-@router.post("/medspas/{medspa_id}/appointments", response_model=AppointmentResponse, status_code=201)
+@router.post(
+    "/medspas/{medspa_id}/appointments", response_model=AppointmentResponse, status_code=201
+)
 def create_appointment(medspa_id: str, data: AppointmentCreate, db: Session = _depends_get_db):
     appointment = AppointmentService.create_appointment(db, medspa_id, data)
     return AppointmentResponse.from_appointment(appointment)

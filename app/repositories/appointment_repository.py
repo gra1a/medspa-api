@@ -31,7 +31,10 @@ class AppointmentRepository:
         )
         return (
             db.query(Appointment)
-            .join(appointment_services_table, Appointment.id == appointment_services_table.c.appointment_id)
+            .join(
+                appointment_services_table,
+                Appointment.id == appointment_services_table.c.appointment_id,
+            )
             .filter(
                 Appointment.medspa_id == medspa_id,
                 Appointment.status == "scheduled",
@@ -84,7 +87,9 @@ class AppointmentRepository:
         return appointment
 
     @staticmethod
-    def sync_appointment_services(db: Session, appointment_id: str, service_ids: builtins.list[str]) -> None:
+    def sync_appointment_services(
+        db: Session, appointment_id: str, service_ids: builtins.list[str]
+    ) -> None:
         """Update appointment-service links: remove ones not in service_ids, add new ones. Does not delete all and re-add."""
         new_ids = set(service_ids)
         rows = db.execute(

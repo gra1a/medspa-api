@@ -49,7 +49,9 @@ def test_list_services_empty(db_session: Session, sample_medspa: Medspa):
     assert items == []
 
 
-def test_list_services_by_medspa(db_session: Session, sample_medspa: Medspa, sample_service: Service):
+def test_list_services_by_medspa(
+    db_session: Session, sample_medspa: Medspa, sample_service: Service
+):
     items, next_cursor = OfferingsService.list_services_by_medspa(
         db_session, sample_medspa.id, limit=20
     )
