@@ -1,10 +1,17 @@
-from typing import TypeVar
+from typing import Any, Protocol, TypeVar
 
 from sqlalchemy.orm import Session
 
 from app.exceptions import NotFoundError
 
-T = TypeVar("T")
+
+class HasIdColumn(Protocol):
+    """Protocol for ORM models with an id column (used for get_by_id)."""
+
+    id: Any  # Column descriptor; comparison with str yields a SQL expression
+
+
+T = TypeVar("T", bound=HasIdColumn)
 
 
 def get_by_id(
