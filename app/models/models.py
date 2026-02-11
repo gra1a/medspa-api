@@ -12,15 +12,16 @@ class Medspa(Base):
     __tablename__ = "medspas"
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    phone_number: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    address: Mapped[str] = mapped_column(Text, nullable=False)
+    phone_number: Mapped[str] = mapped_column(String(50), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Set by DB on insert/update (DEFAULT NOW() and trg_*_updated_at trigger)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     services: Mapped[list["Service"]] = relationship(
@@ -46,11 +47,12 @@ class Service(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     price: Mapped[int] = mapped_column(Integer, nullable=False)  # in cents per spec
     duration: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Set by DB on insert/update (DEFAULT NOW() and trg_*_updated_at trigger)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     medspa: Mapped["Medspa"] = relationship("Medspa", back_populates="services")
@@ -91,11 +93,12 @@ class Appointment(Base):
         Integer, nullable=False
     )  # in cents, derived from services
     total_duration: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Set by DB on insert/update (DEFAULT NOW() and trg_*_updated_at trigger)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+        DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     medspa: Mapped["Medspa"] = relationship("Medspa", back_populates="appointments")

@@ -57,7 +57,7 @@ class AppointmentService:
             id=generate_id(),
             medspa_id=medspa.id,
             start_time=data.start_time,
-            status="scheduled",
+            status=AppointmentStatus.SCHEDULED,
             total_price=total_price,
             total_duration=total_duration,
         )
@@ -83,7 +83,7 @@ class AppointmentService:
         current = appointment.status
         if status == current:
             return appointment
-        allowed = VALID_STATUS_TRANSITIONS.get(current, ())
+        allowed = VALID_STATUS_TRANSITIONS.get(AppointmentStatus(current), ())
         if status not in allowed:
             raise BadRequestError(
                 f"Invalid status transition: cannot change appointment from '{current}' to '{status}'. "
@@ -91,7 +91,7 @@ class AppointmentService:
             )
         appointment.status = status
         with transaction(db):
-            updated = AppointmentRepository.upsert_by_id(db, appointment)
+            updated = AppointmentRepository.update(db, appointment)
         logger.info(
             "appointment_status_updated appointment_id=%s from=%s to=%s",
             appointment_id,

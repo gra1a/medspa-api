@@ -2,8 +2,8 @@
 -- Run after schema.sql. IDs are fixed for reproducibility.
 
 INSERT INTO medspas (id, name, address, phone_number, email) VALUES
-    ('01ARZ3NDEKTSV4RRFFQ69G5FAV', 'Serenity MedSpa', '123 Main St, Austin TX', '512-555-0100', 'hello@serenitymedspa.com'),
-    ('01ARZ3NDEKTSV4RRFFQ69G5FB0', 'Glow Wellness', '456 Oak Ave, Austin TX', '512-555-0200', 'info@glowwellness.com');
+    ('01ARZ3NDEKTSV4RRFFQ69G5FAV', 'Serenity MedSpa', '123 Main St, Austin TX', '(512) 555-0100', 'hello@serenitymedspa.com'),
+    ('01ARZ3NDEKTSV4RRFFQ69G5FB0', 'Glow Wellness', '456 Oak Ave, Austin TX', '(512) 555-0200', 'info@glowwellness.com');
 
 -- price in cents per spec
 INSERT INTO services (id, medspa_id, name, description, price, duration) VALUES

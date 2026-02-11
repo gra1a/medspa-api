@@ -48,8 +48,8 @@ def test_create_appointment_service_from_other_medspa(
         id=generate_id(),
         name="Other MedSpa",
         address="Elsewhere",
-        phone_number=None,
-        email=None,
+        phone_number="(512) 555-0400",
+        email="other@medspa.com",
     )
     db_session.add(other_medspa)
     db_session.flush()

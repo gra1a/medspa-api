@@ -48,4 +48,4 @@ class OfferingsService:
         for key in allowed & update.keys():
             setattr(service, key, update[key])
         with transaction(db):
-            return ServiceRepository.upsert_by_id(db, service)
+            return ServiceRepository.update(db, service)

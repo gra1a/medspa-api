@@ -68,7 +68,7 @@ def test_create_medspa_success(db_session: Session):
     data = MedspaCreate(
         name="New MedSpa",
         address="100 Main St",
-        phone_number="555-1234",
+        phone_number="512-555-1234",
         email="contact@example.com",
     )
     medspa = MedspaService.create_medspa(db_session, data)

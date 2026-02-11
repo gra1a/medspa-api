@@ -63,7 +63,7 @@ REST API for medspa locations, services, and appointments. Built with FastAPI, S
    uvicorn app.main:app --reload
    ```
 
-5. Open **http://localhost:8000** (root redirects to `/docs`).
+5. Open **http://localhost:8000/docs** for interactive API documentation.
 
 ### Running tests
 
@@ -161,7 +161,7 @@ curl -s http://localhost:8000/medspas/01ARZ3NDEKTSV4RRFFQ69G5FAV
 ```bash
 curl -s -X POST http://localhost:8000/medspas \
   -H "Content-Type: application/json" \
-  -d '{"name":"New MedSpa","address":"100 Test St","phone_number":"555-1234","email":"contact@example.com"}'
+  -d '{"name":"New MedSpa","address":"100 Test St","phone_number":"512-555-1234","email":"contact@example.com"}'
 ```
 
 ### Services
@@ -242,7 +242,7 @@ Interactive API docs: **http://localhost:8000/docs** (Swagger), **http://localho
 **Where I overrode or made critical decisions:**
 - **Architecture and layering**: Chose the repository → service → route pattern myself based on maintainability and testability goals. AI suggested alternatives but I stayed with this separation.
 - **ULID over UUID/sequential IDs**: Decided on ULIDs for sortable, URL-safe public identifiers. AI recommended UUIDs initially; I switched for time-ordering benefits.
-- **Pagination style**: Chose simple offset/limit over cursor-based pagination. Evaluated tradeoffs (complexity vs performance at scale) and decided offset is sufficient for this scope.
+- **Pagination style**: Implemented cursor-based pagination (cursor + limit, response with next_cursor) for list endpoints. Cursor is the id of the last item from the previous page; ULIDs make this stable and efficient. Evaluated offset/limit vs cursor—cursor avoids skip-cost at scale and keeps pages stable when data changes.
 - **Transaction boundaries**: Designed where to commit/rollback (in services vs routes). AI suggested route-level commits; I moved to service layer for better encapsulation.
 - **Appointment conflict logic**: Designed the "one appointment per service per timeslot" rule and 409 conflict behavior. This was a product decision AI couldn't make.
 - **Status transition rules**: Defined the state machine (scheduled → completed/canceled only) based on domain understanding.
@@ -257,6 +257,7 @@ Interactive API docs: **http://localhost:8000/docs** (Swagger), **http://localho
 ## Assumptions
 
 - **ULIDs** for identifiers: stable, URL-safe, and sortable; internal IDs.
+- **Medspa contact fields are required**: `address`, `phone_number`, and `email` are all NOT NULL (DB) and required (API). `email` is validated as a proper email address (RFC 5321). `phone_number` is validated as a 10-digit US number and normalized to `(XXX) XXX-XXXX` on input. And name is unique across Medspas.
 - **Single tenant by design**: No auth or tenant isolation in this scope; the API is “open” for the exercise.
 - **Price in cents**: Per spec, `price` (services) and `total_price` (appointments) are stored in cents (integer).
 - **Appointment status**: Simple state machine with three states—`scheduled`, `completed`, `canceled`. Only `scheduled` may transition (to `completed` or `canceled`); `completed` and `canceled` are final. PATCH to an invalid transition returns 400.
@@ -288,6 +289,8 @@ Interactive API docs: **http://localhost:8000/docs** (Swagger), **http://localho
   - **Rate limiting / caching**: Not implemented.  
   - **Running migrations**: Schema is a single SQL file applied at startup (Docker) or manually; no migration versioning (e.g. Alembic) in this scope.
   - **Observability / APM**: Basic request and error logging (including request IDs and exception logging) are included; structured logging, metrics collection (Prometheus), distributed tracing (OpenTelemetry), and centralized log aggregation are not in scope for this exercise but would be required for production.
+  - **CORS middleware**: Not required by the spec and the API is evaluated server-to-server (curl, tests, Swagger UI served from the same origin), so no cross-origin requests occur. In any deployment where a browser-based frontend (React, Next.js, etc.) calls this API from a different origin, CORS headers are mandatory—without them the browser blocks every request at the preflight stage and the frontend is dead on arrival. Adding it in FastAPI is a one-liner via the built-in `CORSMiddleware`: import from `fastapi.middleware.cors`, call `app.add_middleware(CORSMiddleware, allow_origins=[...], allow_methods=["*"], allow_headers=["*"])` in `main.py`, and configure the allowed origins per environment (e.g. `["http://localhost:3000"]` in dev, the real domain in prod). The origin list should be strict in production (never `"*"` with credentials) to avoid exposing the API to arbitrary sites. Left out here because it adds no value to the exercise, but it would be one of the first things configured when wiring up a frontend client.
+  - **Temporary/disposable email protection (not implemented)**: To protect the system from abuse, a service like [Kickbox](https://kickbox.com/), [ZeroBounce](https://www.zerobounce.net/), or [Abstract API Email Validation](https://www.abstractapi.com/api/email-verification-validation-api) could be integrated to reject disposable/temporary email addresses at medspa creation time. This would be implemented as a pre-creation check in `MedspaService.create_medspa` (or as a Pydantic validator calling the external API), returning 400 when a throwaway email domain is detected. Left out of this scope to avoid an external dependency, but recommended for production.
 
 ---
 

@@ -85,7 +85,7 @@ def test_create_medspa_success(client: TestClient):
         json={
             "name": "New MedSpa",
             "address": "100 Main St",
-            "phone_number": "555-1234",
+            "phone_number": "512-555-1234",
             "email": "contact@newmedspa.com",
         },
     )

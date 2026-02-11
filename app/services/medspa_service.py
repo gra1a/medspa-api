@@ -3,6 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.db.database import transaction
+from app.exceptions import ConflictError
 from app.models.models import Medspa
 from app.repositories.medspa_repository import MedspaRepository
 from app.schemas.medspas import MedspaCreate
@@ -26,6 +27,8 @@ class MedspaService:
 
     @staticmethod
     def create_medspa(db: Session, data: MedspaCreate) -> Medspa:
+        if MedspaRepository.get_by_name(db, data.name):
+            raise ConflictError(f"A medspa named '{data.name}' already exists")
         medspa = Medspa(
             id=generate_id(),
             name=data.name,
@@ -34,4 +37,4 @@ class MedspaService:
             email=data.email,
         )
         with transaction(db):
-            return MedspaRepository.upsert_by_id(db, medspa)
+            return MedspaRepository.create(db, medspa)
