@@ -1,9 +1,8 @@
 import logging
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from sqlalchemy.orm import Session
-from typing import List, Optional
-
 
 from app.db.database import transaction
 from app.exceptions import BadRequestError, ConflictError, NotFoundError
@@ -108,7 +107,7 @@ class AppointmentService:
         status: Optional[AppointmentStatus] = None,
         cursor: Optional[str] = None,
         limit: int = 20,
-    ) -> tuple[List[Appointment], Optional[str]]:
+    ) -> tuple[list[Appointment], Optional[str]]:
         medspa_id_filter = None
         if medspa_id is not None:
             medspa = MedspaService.get_medspa(db, medspa_id)

@@ -1,6 +1,7 @@
 
+from typing import Optional
+
 from sqlalchemy.orm import Session
-from typing import Optional, Tuple, List
 
 from app.db.database import transaction
 from app.models.models import Medspa
@@ -18,7 +19,7 @@ class MedspaService:
     @staticmethod
     def list_medspas(
         db: Session, cursor: Optional[str] = None, limit: int = 20
-    ) -> Tuple[List[Medspa], Optional[str]]:
+    ) -> tuple[list[Medspa], Optional[str]]:
         raw = MedspaRepository.list(db, cursor=cursor, limit=limit)
         items = raw[:limit]
         next_cursor = items[-1].id if len(raw) > limit else None

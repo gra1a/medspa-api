@@ -1,6 +1,7 @@
 
+from typing import Optional
+
 from sqlalchemy.orm import Session
-from typing import Optional, List
 
 from app.db.database import transaction
 from app.models.models import Service
@@ -33,7 +34,7 @@ class OfferingsService:
     @staticmethod
     def list_services_by_medspa(
         db: Session, medspa_id: str, cursor: Optional[str] = None, limit: int = 20
-    ) -> tuple[List[Service], Optional[str]]:
+    ) -> tuple[list[Service], Optional[str]]:
         medspa = MedspaService.get_medspa(db, medspa_id)
         raw = ServiceRepository.list_by_medspa_id(db, medspa.id, cursor=cursor, limit=limit)
         items = raw[:limit]

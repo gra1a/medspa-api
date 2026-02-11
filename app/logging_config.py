@@ -3,7 +3,6 @@
 import contextvars
 import logging
 import sys
-
 from typing import Optional
 
 # Set by RequestIDMiddleware so all logs during a request can include the ID.

@@ -1,7 +1,8 @@
 """Persistence only for Service aggregate. No business rules."""
 
 
-from typing import Optional, List
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from app.models.models import Service
@@ -15,7 +16,7 @@ class ServiceRepository:
     @staticmethod
     def list_by_medspa_id(
         db: Session, medspa_id: str, cursor: Optional[str] = None, limit: int = 20
-    ) -> List[Service]:
+    ) -> list[Service]:
         """Return up to limit+1 items ordered by id, after cursor (exclusive)."""
         q = (
             db.query(Service)
@@ -27,7 +28,7 @@ class ServiceRepository:
         return q.limit(limit + 1).all()
 
     @staticmethod
-    def find_by_ids(db: Session, ids: List[str]) -> List[Service]:
+    def find_by_ids(db: Session, ids: list[str]) -> list[Service]:
         if not ids:
             return []
         return db.query(Service).filter(Service.id.in_(ids)).all()

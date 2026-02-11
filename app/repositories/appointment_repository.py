@@ -1,7 +1,8 @@
 """Persistence only for Appointment aggregate. No business rules."""
 
-from typing import Optional, List
+import builtins
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
@@ -21,7 +22,7 @@ class AppointmentRepository:
         start_time: datetime,
         end_time: datetime,
         service_ids: list[str],
-    ) -> List[Appointment]:
+    ) -> list[Appointment]:
         """Return scheduled appointments at this medspa that overlap [start_time, end_time) and use any of the given services."""
         if not service_ids:
             return []
@@ -50,7 +51,7 @@ class AppointmentRepository:
         status: Optional[str] = None,
         cursor: Optional[str] = None,
         limit: int = 20,
-    ) -> List[Appointment]:
+    ) -> list[Appointment]:
         """Return up to limit+1 items ordered by id, after cursor (exclusive)."""
         q = db.query(Appointment)
         if medspa_id is not None:
@@ -68,7 +69,7 @@ class AppointmentRepository:
     def create_with_services(
         db: Session,
         appointment: Appointment,
-        service_ids: List[str],
+        service_ids: builtins.list[str],
     ) -> Appointment:
         """Insert a new appointment and its service links. For updates use upsert_by_id / upsert_by_id_with_services."""
         db.add(appointment)
@@ -83,7 +84,7 @@ class AppointmentRepository:
         return appointment
 
     @staticmethod
-    def sync_appointment_services(db: Session, appointment_id: str, service_ids: List[str]) -> None:
+    def sync_appointment_services(db: Session, appointment_id: str, service_ids: builtins.list[str]) -> None:
         """Update appointment-service links: remove ones not in service_ids, add new ones. Does not delete all and re-add."""
         new_ids = set(service_ids)
         rows = db.execute(
@@ -124,7 +125,7 @@ class AppointmentRepository:
     def upsert_by_id_with_services(
         db: Session,
         appointment: Appointment,
-        service_ids: List[str],
+        service_ids: builtins.list[str],
     ) -> Appointment:
         """Insert appointment + service links if id is new; otherwise update the row and replace service links. Returns the persisted entity."""
         existing = AppointmentRepository.get_by_id(db, appointment.id)

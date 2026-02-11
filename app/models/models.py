@@ -1,6 +1,6 @@
 from datetime import datetime
+from typing import Optional
 
-from typing import Optional,List
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
@@ -19,8 +19,8 @@ class Medspa(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
-    services: Mapped[List["Service"]] = relationship("Service", back_populates="medspa", cascade="all, delete-orphan")
-    appointments: Mapped[List["Appointment"]] = relationship("Appointment", back_populates="medspa", cascade="all, delete-orphan")
+    services: Mapped[list["Service"]] = relationship("Service", back_populates="medspa", cascade="all, delete-orphan")
+    appointments: Mapped[list["Appointment"]] = relationship("Appointment", back_populates="medspa", cascade="all, delete-orphan")
 
 
 class Service(Base):
@@ -70,7 +70,7 @@ class Appointment(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     medspa: Mapped["Medspa"] = relationship("Medspa", back_populates="appointments")
-    services: Mapped[List["Service"]] = relationship(
+    services: Mapped[list["Service"]] = relationship(
         "Service",
         secondary=appointment_services_table,
         backref="appointments",

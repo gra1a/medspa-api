@@ -1,7 +1,8 @@
 """Persistence only for Medspa aggregate. No business rules."""
 
 
-from typing import Optional, List
+from typing import Optional
+
 from sqlalchemy.orm import Session
 
 from app.models.models import Medspa
@@ -13,7 +14,7 @@ class MedspaRepository:
         return db.query(Medspa).filter(Medspa.id == id).first()
 
     @staticmethod
-    def list(db: Session, cursor: Optional[str] = None, limit: int = 20) -> List[Medspa]:
+    def list(db: Session, cursor: Optional[str] = None, limit: int = 20) -> list[Medspa]:
         """Return up to limit+1 items ordered by id, after cursor (exclusive)."""
         q = db.query(Medspa).order_by(Medspa.id)
         if cursor is not None:

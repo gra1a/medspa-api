@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Literal, List
-
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -22,11 +21,11 @@ VALID_STATUS_TRANSITIONS: dict[str, tuple[str, ...]] = {
 
 class AppointmentCreate(BaseModel):
     start_time: datetime
-    service_ids: List[str] = Field(..., min_length=1)
+    service_ids: list[str] = Field(..., min_length=1)
 
     @field_validator("service_ids")
     @classmethod
-    def unique_service_ids(cls, v: List[str]) -> List[str]:
+    def unique_service_ids(cls, v: list[str]) -> list[str]:
         return list(dict.fromkeys(v))
 
     @field_validator("start_time")
@@ -60,7 +59,7 @@ class AppointmentResponse(BaseModel):
     status: str
     total_price: int  # in cents
     total_duration: int
-    services: List[ServiceInAppointment]
+    services: list[ServiceInAppointment]
     created_at: datetime
     updated_at: datetime
 
