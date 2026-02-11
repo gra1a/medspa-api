@@ -6,7 +6,7 @@ from app.models.models import Medspa
 from app.utils.query import get_by_id
 from app.utils.ulid import generate_id
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.integration
 
 
 def test_get_by_id_found(db_session: Session, sample_medspa: Medspa):
