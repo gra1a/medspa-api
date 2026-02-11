@@ -1,8 +1,10 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-pydantic
-pydantic-settings
-python-dotenv
-python-ulid
+# Pinned with ~= for compatible release (patch/minor updates allowed, majors locked).
+# Run: pip install -r requirements.txt
+fastapi~=0.115.0
+uvicorn[standard]~=0.32.0
+sqlalchemy~=2.0.0
+psycopg2-binary~=2.9.0
+pydantic~=2.10.0
+pydantic-settings~=2.6.0
+python-dotenv~=1.0.0
+python-ulid~=3.0.0

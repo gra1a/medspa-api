@@ -8,6 +8,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     database_url: str = "postgresql://postgres:postgres@localhost:5432/medspa_db"
+    log_level: str = "INFO"
 
 
 settings = Settings()

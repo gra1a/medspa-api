@@ -20,8 +20,8 @@ Keep routes thin: parse input → call service → map to response. Do not put b
 ## 2. Routes (API layer)
 
 - Use **`APIRouter()`** per resource; mount with `app.include_router(router, tags=[...])` in `main.py`.
-- Prefer **path parameters** for resource identity: `/appointments/{appointment_ulid}`, `/medspas/{medspa_ulid}/appointments`.
-- Use **query parameters** for list filters and pagination: `?medspa_ulid=...&status=...`.
+- Prefer **path parameters** for resource identity: `/appointments/{appointment_id}`, `/medspas/{medspa_id}/appointments`.
+- Use **query parameters** for list filters and pagination: `?medspa_id=...&status=...`.
 - Declare **`response_model`** on every route so OpenAPI and serialization are correct.
 - Set **`status_code=201`** for `POST` that create a resource.
 - Use **`Depends(get_db)`** for DB session; pass the session into services, do not create engines or sessions inside routes.
@@ -30,9 +30,9 @@ Keep routes thin: parse input → call service → map to response. Do not put b
 Example pattern:
 
 ```python
-@router.post("/medspas/{medspa_ulid}/appointments", response_model=AppointmentResponse, status_code=201)
-def create_appointment(medspa_ulid: str, data: AppointmentCreate, db: Session = Depends(get_db)):
-    medspa = MedspaService.get_medspa_by_ulid(db, medspa_ulid)
+@router.post("/medspas/{medspa_id}/appointments", response_model=AppointmentResponse, status_code=201)
+def create_appointment(medspa_id: str, data: AppointmentCreate, db: Session = Depends(get_db)):
+    medspa = MedspaService.get_medspa(db, medspa_id)
     appointment = AppointmentService.create_appointment(db, medspa.id, data)
     return _to_response(appointment)
 ```
@@ -81,7 +81,7 @@ def create_appointment(medspa_ulid: str, data: AppointmentCreate, db: Session = 
 
 ## 7. Naming and REST conventions
 
-- **URLs**: plural nouns for collections (`/appointments`, `/medspas`, `/services`). Nested resources: `/medspas/{medspa_ulid}/appointments`.
+- **URLs**: plural nouns for collections (`/appointments`, `/medspas`, `/services`). Nested resources: `/medspas/{medspa_id}/appointments`.
 - **Methods**: `GET` (read), `POST` (create), `PATCH` (partial update), `PUT` (full replace, if used), `DELETE` (delete).
 - **IDs in paths**: use the **public identifier** (e.g. ULID) in URLs; resolve to internal id in the app.
 - **Consistent response shape**: single resource → one object; list → array of the same response schema. Use the same `response_model` for list and get-by-id when the shape is the same.

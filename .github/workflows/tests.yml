@@ -5,6 +5,23 @@ on:
     branches-ignore: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Ruff (lint)
+        run: ruff check app tests
+      - name: Ruff (format check)
+        run: ruff format --check app tests
+      - name: Pyright
+        run: pyright app tests
+
   test:
     runs-on: ubuntu-latest
 

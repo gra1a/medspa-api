@@ -1,33 +1,29 @@
-from functools import wraps
-from typing import Any, Callable, TypeVar
+import logging
+from collections.abc import Generator
+from contextlib import contextmanager
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker, declarative_base
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-F = TypeVar("F", bound=Callable[..., Any])
 
-
-def transaction(f: F) -> F:
-    """Decorator for repository methods: commits on success, rolls back on exception. Session must be the first positional arg (db)."""
-    @wraps(f)
-    def wrap(*args: Any, **kwargs: Any) -> Any:
-        db = args[0] if args else kwargs.get("db")
-        if not isinstance(db, Session):
-            raise TypeError("@transaction requires Session as first argument (db)")
-        try:
-            result = f(*args, **kwargs)
-            db.commit()
-            return result
-        except Exception:
-            db.rollback()
-            raise
-    return wrap  # type: ignore[return-value]
+@contextmanager
+def transaction(session: Session) -> Generator[Session, None, None]:
+    """Context manager for service-layer transactions. Commits on success, rolls back on exception."""
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        logger.exception("transaction rollback")
+        raise
 
 
 def get_db():

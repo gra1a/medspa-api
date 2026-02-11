@@ -1,12 +1,12 @@
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.unit
-
 from app.exceptions import NotFoundError
 from app.models.models import Medspa
 from app.utils.query import get_by_id
 from app.utils.ulid import generate_id
+
+pytestmark = pytest.mark.unit
 
 
 def test_get_by_id_found(db_session: Session, sample_medspa: Medspa):

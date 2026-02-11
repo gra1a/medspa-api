@@ -8,15 +8,18 @@ from app.services.offerings_service import OfferingsService
 
 router = APIRouter()
 
+_depends_get_db = Depends(get_db)
+_depends_get_pagination = Depends(get_pagination)
+
 
 @router.post("/medspas/{medspa_id}/services", response_model=ServiceResponse, status_code=201)
-def create_service(medspa_id: str, data: ServiceCreate, db: Session = Depends(get_db)):
+def create_service(medspa_id: str, data: ServiceCreate, db: Session = _depends_get_db):
     service = OfferingsService.create_service(db, medspa_id, data)
     return ServiceResponse.from_service(service)
 
 
 @router.get("/services/{service_id}", response_model=ServiceResponse)
-def get_service(service_id: str, db: Session = Depends(get_db)):
+def get_service(service_id: str, db: Session = _depends_get_db):
     service = OfferingsService.get_service(db, service_id)
     return ServiceResponse.from_service(service)
 
@@ -24,8 +27,8 @@ def get_service(service_id: str, db: Session = Depends(get_db)):
 @router.get("/medspas/{medspa_id}/services", response_model=PaginatedResponse[ServiceResponse])
 def list_services(
     medspa_id: str,
-    db: Session = Depends(get_db),
-    pagination: PaginationParams = Depends(get_pagination),
+    db: Session = _depends_get_db,
+    pagination: PaginationParams = _depends_get_pagination,
 ):
     items, next_cursor = OfferingsService.list_services_by_medspa(
         db, medspa_id, cursor=pagination.cursor, limit=pagination.limit
@@ -38,6 +41,6 @@ def list_services(
 
 
 @router.patch("/services/{service_id}", response_model=ServiceResponse)
-def update_service(service_id: str, data: ServiceUpdate, db: Session = Depends(get_db)):
+def update_service(service_id: str, data: ServiceUpdate, db: Session = _depends_get_db):
     service = OfferingsService.update_service(db, service_id, data)
     return ServiceResponse.from_service(service)

@@ -1,5 +1,5 @@
-from datetime import datetime
-from typing import TYPE_CHECKING, List, Literal
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -10,14 +10,22 @@ if TYPE_CHECKING:
 VALID_STATUSES = ("scheduled", "completed", "canceled")
 AppointmentStatus = Literal["scheduled", "completed", "canceled"]
 
+# Valid status transitions: from_status -> set of allowed to_status
+# scheduled -> completed, canceled; completed and canceled are final (no transitions)
+VALID_STATUS_TRANSITIONS: dict[str, tuple[str, ...]] = {
+    "scheduled": ("completed", "canceled"),
+    "completed": (),  # final state
+    "canceled": (),  # final state
+}
+
 
 class AppointmentCreate(BaseModel):
     start_time: datetime
-    service_ids: List[str] = Field(..., min_length=1)
+    service_ids: list[str] = Field(..., min_length=1)
 
     @field_validator("service_ids")
     @classmethod
-    def unique_service_ids(cls, v: List[str]) -> List[str]:
+    def unique_service_ids(cls, v: list[str]) -> list[str]:
         return list(dict.fromkeys(v))
 
     @field_validator("start_time")
@@ -25,9 +33,7 @@ class AppointmentCreate(BaseModel):
     def start_time_not_in_past(cls, v: datetime) -> datetime:
         if v.tzinfo is None:
             # Naive datetime: treat as UTC for comparison
-            from datetime import timezone
             v = v.replace(tzinfo=timezone.utc)
-        from datetime import timezone
         if v < datetime.now(timezone.utc):
             raise ValueError("start_time cannot be in the past")
         return v
@@ -53,7 +59,7 @@ class AppointmentResponse(BaseModel):
     status: str
     total_price: int  # in cents
     total_duration: int
-    services: List[ServiceInAppointment]
+    services: list[ServiceInAppointment]
     created_at: datetime
     updated_at: datetime
 
