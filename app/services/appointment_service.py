@@ -15,7 +15,6 @@ from app.schemas.appointments import (
     AppointmentStatus,
 )
 from app.services.medspa_service import MedspaService
-from app.utils.query import get_by_id
 from app.utils.ulid import generate_id
 
 logger = logging.getLogger(__name__)
@@ -75,7 +74,7 @@ class AppointmentService:
 
     @staticmethod
     def get_appointment(db: Session, id: str) -> Appointment:
-        return get_by_id(db, Appointment, id, "Appointment not found")
+        return AppointmentRepository.get_by_id(db, id)
 
     @staticmethod
     def update_status(db: Session, appointment_id: str, status: AppointmentStatus) -> Appointment:

@@ -13,7 +13,13 @@ def test_list_by_medspa_id_empty(db_session: Session, sample_medspa):
     from app.models.models import Medspa
     from app.repositories.medspa_repository import MedspaRepository
 
-    m2 = Medspa(id=generate_id(), name="Empty MedSpa", address="789 Empty St", phone_number="(512) 555-0300", email="empty@medspa.com")
+    m2 = Medspa(
+        id=generate_id(),
+        name="Empty MedSpa",
+        address="789 Empty St",
+        phone_number="(512) 555-0300",
+        email="empty@medspa.com",
+    )
     MedspaRepository.create(db_session, m2)
     lst = ServiceRepository.list_by_medspa_id(db_session, m2.id, limit=10)
     assert lst == []

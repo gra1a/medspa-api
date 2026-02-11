@@ -39,5 +39,5 @@ class MedspaService:
             with transaction(db):
                 MedspaRepository.create(db, medspa)
         except IntegrityError:
-            raise ConflictError(f"A medspa named '{data.name}' already exists")
+            raise ConflictError(f"A medspa named '{data.name}' already exists") from None
         return medspa

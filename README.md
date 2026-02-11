@@ -256,25 +256,22 @@ Interactive API docs: **http://localhost:8000/docs** (Swagger), **http://localho
 
 ## Assumptions
 
-- **ULIDs** for identifiers: stable, URL-safe, and sortable; internal IDs.
-- **Medspa contact fields are required**: `address`, `phone_number`, and `email` are all NOT NULL (DB) and required (API). `email` is validated as a proper email address (RFC 5321). `phone_number` is validated as a 10-digit US number and normalized to `(XXX) XXX-XXXX` on input. And name is unique across Medspas.
+- **Medspa contact fields are required**: The spec lists `address`, `phone_number`, and `email` without specifying whether they are optional. I assumed they are required (NOT NULL at the DB level, required in the API schema). `email` is validated as a proper email address (RFC 5321 via `EmailStr`). `phone_number` is validated as a 10-digit US number and normalized to `(XXX) XXX-XXXX` on input. `name` is unique across medspas.
 - **Single tenant by design**: No auth or tenant isolation in this scope; the API is “open” for the exercise.
-- **Price in cents**: Per spec, `price` (services) and `total_price` (appointments) are stored in cents (integer).
-- **Appointment status**: Simple state machine with three states—`scheduled`, `completed`, `canceled`. Only `scheduled` may transition (to `completed` or `canceled`); `completed` and `canceled` are final. PATCH to an invalid transition returns 400.
-- **Timezone**: `start_time` is stored in UTC; naive datetimes in requests are treated as UTC for “no past” validation.
-- **Postgres**: Target DB is PostgreSQL; schema uses `SERIAL`, `TIMESTAMPTZ`, and `NUMERIC(10,2)`.
-- **No soft deletes**: Deletes are hard (e.g. cascade from medspa); no “archived” or “deleted_at” in scope.
+- **Appointment status transitions**: The spec lists three statuses (`scheduled`, `completed`, `canceled`) but does not define which transitions are valid. I assumed `scheduled` is the only non-final state — it can transition to `completed` or `canceled`, but those are terminal. PATCH to an invalid transition returns 400.
+- **Appointment PATCH is status-only**: The spec says "Update appointment status," so PATCH only accepts a `status` field. Other appointment attributes (start_time, services) are immutable after creation. In a real product, rescheduling or changing services would likely be a separate operation with its own validation (e.g. re-checking availability).
+- **Timezone**: `start_time` is stored in UTC; naive datetimes in requests are treated as UTC for `no past` validation.
+- **No soft deletes**: Deletes are hard (e.g. cascade from medspa); no `archived` or `deleted_at` in scope.
 
 ---
 
 ## Tradeoffs
 
 - **One appointment per timeslot per service**: A given service can be booked in only one appointment at a time for overlapping slots; creating another appointment that would overlap for that service returns 409. Keeps availability simple; a real product might support concurrent bookings or resource pools.
-- **ULID vs UUID**: Chose ULID for time-sortable, compact public IDs; no dependency on UUID extension in Postgres.
+- **ULID vs UUID**: Chose ULID for time-sortable, compact public IDs; no dependency on UUID extension in Postgres. The cost is no native DB type (stored as `CHAR(26)` instead of a 16-byte `uuid`), less built-in tooling support, and slightly larger storage per row. Acceptable here given the benefits of time-ordering and URL-safe IDs.
 - **Stored totals on appointments**: Redundant with summing services at write time, but reads (get, list) heavily outnumber writes (create, status update). Storing totals avoids a JOIN + aggregation over services on every read and keeps appointment detail a single-row fetch; preserves history if service prices change later. Totals in cents to match service prices.
-- **No auth in scope**: Keeps the exercise focused on data model and CRUD; real product would add auth and tenant scoping.
 - **Sync SQLAlchemy**: Simpler for this scope. Async starts to pay off at high concurrency (e.g. hundreds of concurrent connections or thousands of req/s) where the event loop can overlap I/O; at typical medspa API volumes (tens to low hundreds of req/s) sync is sufficient and easier to reason about.
-- **Global exception handler**: Custom `AppException` returns consistent `{"detail": "..."}` and status codes (e.g. 404) without repeating logic in every route.
+- **Global exception handler over per-route error handling**: A single `AppException` handler in `main.py` gives uniform `{"detail": "..."}` responses and avoids repetitive try/except in every route. The cost is less per-route control—if a specific endpoint needs a custom error shape or recovery logic, it has to work around the global handler or bypass it. Acceptable here because all errors follow the same shape.
 
 ---
 
@@ -282,11 +279,11 @@ Interactive API docs: **http://localhost:8000/docs** (Swagger), **http://localho
 
 - **Out of scope (and why)**  
   - **Concurrent bookings per service / resource pools**: One appointment per timeslot per service only; no double-booking of the same service in overlapping slots. Supporting multiple concurrent bookings or pool-based resources would require availability and capacity model changes.
-  - **Authentication / authorization**: Not in requirements; would be a separate pass (e.g. API keys or JWT + tenant ID).
   - **Filtering beyond current params**: Appointment list supports only `medspa_id` and `status`; no date range or search by customer.  
   - **Customer / user entity**: Appointments are not tied to a “customer”; adding it would imply schema and API changes.  
   - **Idempotency**: No idempotency keys on POST/PATCH; could be added for safe retries.  
   - **Rate limiting / caching**: Not implemented.  
+  - **Authentication / authorization scoping**: No auth in scope; keeps the exercise focused on data model and CRUD. A real product would add auth and tenant scoping (e.g. API keys or JWT + tenant ID).
   - **Running migrations**: Schema is a single SQL file applied at startup (Docker) or manually; no migration versioning (e.g. Alembic) in this scope.
   - **Observability / APM**: Basic request and error logging (including request IDs and exception logging) are included; structured logging, metrics collection (Prometheus), distributed tracing (OpenTelemetry), and centralized log aggregation are not in scope for this exercise but would be required for production.
   - **CORS middleware**: Not required by the spec and the API is evaluated server-to-server (curl, tests, Swagger UI served from the same origin), so no cross-origin requests occur. In any deployment where a browser-based frontend (React, Next.js, etc.) calls this API from a different origin, CORS headers are mandatory—without them the browser blocks every request at the preflight stage and the frontend is dead on arrival. Adding it in FastAPI is a one-liner via the built-in `CORSMiddleware`: import from `fastapi.middleware.cors`, call `app.add_middleware(CORSMiddleware, allow_origins=[...], allow_methods=["*"], allow_headers=["*"])` in `main.py`, and configure the allowed origins per environment (e.g. `["http://localhost:3000"]` in dev, the real domain in prod). The origin list should be strict in production (never `"*"` with credentials) to avoid exposing the API to arbitrary sites. Left out here because it adds no value to the exercise, but it would be one of the first things configured when wiring up a frontend client.

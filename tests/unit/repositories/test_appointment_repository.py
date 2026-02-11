@@ -252,5 +252,3 @@ def test_find_scheduled_overlapping_empty_service_ids_returns_empty(
         db_session, sample_medspa.id, base, base + timedelta(minutes=30), []
     )
     assert result == []
-
-

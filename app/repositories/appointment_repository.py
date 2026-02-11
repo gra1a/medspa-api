@@ -1,23 +1,38 @@
 """Persistence only for Appointment aggregate. No business rules."""
 
+import builtins
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
+from app.exceptions import NotFoundError
 from app.models.models import Appointment, appointment_services_table
 
 
 class AppointmentRepository:
+    @staticmethod
+    def get_by_id(db: Session, id: str) -> Appointment:
+        """Load a single appointment by id with services eager-loaded. Raises NotFoundError if missing."""
+        appointment = (
+            db.query(Appointment)
+            .options(selectinload(Appointment.services))
+            .filter(Appointment.id == id)
+            .first()
+        )
+        if not appointment:
+            raise NotFoundError("Appointment not found")
+        return appointment
+
     @staticmethod
     def find_scheduled_overlapping(
         db: Session,
         medspa_id: str,
         start_time: datetime,
         end_time: datetime,
-        service_ids: List[str],
-    ) -> List[Appointment]:
+        service_ids: list[str],
+    ) -> list[Appointment]:
         """Return scheduled appointments at this medspa that overlap [start_time, end_time) and use any of the given services."""
         if not service_ids:
             return []
@@ -65,7 +80,7 @@ class AppointmentRepository:
     def create_with_services(
         db: Session,
         appointment: Appointment,
-        service_ids: List[str],
+        service_ids: builtins.list[str],
     ) -> Appointment:
         """Insert a new appointment and its service links. For updates use update()."""
         db.add(appointment)
