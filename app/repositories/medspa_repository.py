@@ -17,11 +17,6 @@ class MedspaRepository:
         return q.limit(limit + 1).all()
 
     @staticmethod
-    def get_by_name(db: Session, name: str) -> Optional[Medspa]:
-        """Return a medspa by exact name, or None."""
-        return db.query(Medspa).filter(Medspa.name == name).first()
-
-    @staticmethod
     def create(db: Session, medspa: Medspa) -> Medspa:
         """Persist a new medspa."""
         db.add(medspa)

@@ -1,7 +1,7 @@
 import pytest
 from sqlalchemy.orm import Session
 
-from app.exceptions import NotFoundError
+from app.exceptions import ConflictError, NotFoundError
 from app.models.models import Medspa
 from app.schemas.medspas import MedspaCreate
 from app.services.medspa_service import MedspaService
@@ -77,3 +77,22 @@ def test_create_medspa_success(db_session: Session):
     assert medspa.address == "100 Main St"
     got = MedspaService.get_medspa(db_session, medspa.id)
     assert got.name == medspa.name
+
+
+def test_create_medspa_duplicate_name_returns_conflict(db_session: Session):
+    data = MedspaCreate(
+        name="Duplicate MedSpa",
+        address="100 Main St",
+        phone_number="512-555-1234",
+        email="first@example.com",
+    )
+    MedspaService.create_medspa(db_session, data)
+
+    data2 = MedspaCreate(
+        name="Duplicate MedSpa",
+        address="200 Other St",
+        phone_number="512-555-5678",
+        email="second@example.com",
+    )
+    with pytest.raises(ConflictError, match="already exists"):
+        MedspaService.create_medspa(db_session, data2)

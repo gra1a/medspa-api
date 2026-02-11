@@ -1,5 +1,6 @@
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import transaction
@@ -27,8 +28,6 @@ class MedspaService:
 
     @staticmethod
     def create_medspa(db: Session, data: MedspaCreate) -> Medspa:
-        if MedspaRepository.get_by_name(db, data.name):
-            raise ConflictError(f"A medspa named '{data.name}' already exists")
         medspa = Medspa(
             id=generate_id(),
             name=data.name,
@@ -36,5 +35,9 @@ class MedspaService:
             phone_number=data.phone_number,
             email=data.email,
         )
-        with transaction(db):
-            return MedspaRepository.create(db, medspa)
+        try:
+            with transaction(db):
+                MedspaRepository.create(db, medspa)
+        except IntegrityError:
+            raise ConflictError(f"A medspa named '{data.name}' already exists")
+        return medspa
