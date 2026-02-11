@@ -8,24 +8,19 @@ from app.utils.ulid import generate_id
 pytestmark = pytest.mark.unit
 
 
-def test_get_by_id_found(db_session: Session, sample_service: Service):
-    got = ServiceRepository.get_by_id(db_session, sample_service.id)
-    assert got is not None
-    assert got.id == sample_service.id
-    assert got.name == sample_service.name
-
-
-def test_get_by_id_not_found(db_session: Session):
-    assert ServiceRepository.get_by_id(db_session, generate_id()) is None
-
-
 def test_list_by_medspa_id_empty(db_session: Session, sample_medspa):
     # create another medspa with no services
     from app.models.models import Medspa
     from app.repositories.medspa_repository import MedspaRepository
 
-    m2 = Medspa(id=generate_id(), name="Empty MedSpa", address=None, phone_number=None, email=None)
-    MedspaRepository.persist_new(db_session, m2)
+    m2 = Medspa(
+        id=generate_id(),
+        name="Empty MedSpa",
+        address="789 Empty St",
+        phone_number="(512) 555-0300",
+        email="empty@medspa.com",
+    )
+    MedspaRepository.create(db_session, m2)
     lst = ServiceRepository.list_by_medspa_id(db_session, m2.id, limit=10)
     assert lst == []
 
@@ -66,19 +61,19 @@ def test_add_persists_and_returns_service(db_session: Session, sample_medspa):
         price=9900,  # cents
         duration=60,
     )
-    added = ServiceRepository.upsert_by_id(db_session, service)
+    added = ServiceRepository.create(db_session, service)
     assert added.id is not None
     assert added.name == "Repo Service"
     db_session.commit()
-    got = ServiceRepository.get_by_id(db_session, added.id)
+    got = db_session.get(Service, added.id)
     assert got is not None
     assert got.price == 9900
 
 
 def test_save_commits_changes(db_session: Session, sample_service: Service):
     sample_service.name = "Updated Name"
-    saved = ServiceRepository.upsert_by_id(db_session, sample_service)
+    saved = ServiceRepository.update(db_session, sample_service)
     assert saved.name == "Updated Name"
-    got = ServiceRepository.get_by_id(db_session, sample_service.id)
+    got = db_session.get(Service, sample_service.id)
     assert got is not None
     assert got.name == "Updated Name"

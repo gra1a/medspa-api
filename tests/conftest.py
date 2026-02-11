@@ -67,7 +67,7 @@ def sample_medspa(db_session):
         id=generate_id(),
         name="Test MedSpa",
         address="123 Test St",
-        phone_number="555-0000",
+        phone_number="(512) 555-0100",
         email="test@test.com",
     )
     db_session.add(m)
@@ -85,8 +85,8 @@ def multiple_medspas(db_session):
             id=generate_id(),
             name=f"MedSpa {i}",
             address=f"Address {i}",
-            phone_number=None,
-            email=None,
+            phone_number=f"(512) 555-{i:04d}",
+            email=f"medspa{i}@test.com",
         )
         db_session.add(m)
         medspas.append(m)

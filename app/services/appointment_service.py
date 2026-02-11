@@ -15,7 +15,6 @@ from app.schemas.appointments import (
     AppointmentStatus,
 )
 from app.services.medspa_service import MedspaService
-from app.utils.query import get_by_id
 from app.utils.ulid import generate_id
 
 logger = logging.getLogger(__name__)
@@ -57,7 +56,7 @@ class AppointmentService:
             id=generate_id(),
             medspa_id=medspa.id,
             start_time=data.start_time,
-            status="scheduled",
+            status=AppointmentStatus.SCHEDULED,
             total_price=total_price,
             total_duration=total_duration,
         )
@@ -75,7 +74,7 @@ class AppointmentService:
 
     @staticmethod
     def get_appointment(db: Session, id: str) -> Appointment:
-        return get_by_id(db, Appointment, id, "Appointment not found")
+        return AppointmentRepository.get_by_id(db, id)
 
     @staticmethod
     def update_status(db: Session, appointment_id: str, status: AppointmentStatus) -> Appointment:
@@ -83,7 +82,7 @@ class AppointmentService:
         current = appointment.status
         if status == current:
             return appointment
-        allowed = VALID_STATUS_TRANSITIONS.get(current, ())
+        allowed = VALID_STATUS_TRANSITIONS.get(AppointmentStatus(current), ())
         if status not in allowed:
             raise BadRequestError(
                 f"Invalid status transition: cannot change appointment from '{current}' to '{status}'. "
@@ -91,7 +90,7 @@ class AppointmentService:
             )
         appointment.status = status
         with transaction(db):
-            updated = AppointmentRepository.upsert_by_id(db, appointment)
+            updated = AppointmentRepository.update(db, appointment)
         logger.info(
             "appointment_status_updated appointment_id=%s from=%s to=%s",
             appointment_id,

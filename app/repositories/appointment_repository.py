@@ -4,16 +4,26 @@ import builtins
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select, text
-from sqlalchemy.orm import Session
+from sqlalchemy import text
+from sqlalchemy.orm import Session, selectinload
 
+from app.exceptions import NotFoundError
 from app.models.models import Appointment, appointment_services_table
 
 
 class AppointmentRepository:
     @staticmethod
-    def get_by_id(db: Session, id: str) -> Optional[Appointment]:
-        return db.query(Appointment).filter(Appointment.id == id).first()
+    def get_by_id(db: Session, id: str) -> Appointment:
+        """Load a single appointment by id with services eager-loaded. Raises NotFoundError if missing."""
+        appointment = (
+            db.query(Appointment)
+            .options(selectinload(Appointment.services))
+            .filter(Appointment.id == id)
+            .first()
+        )
+        if not appointment:
+            raise NotFoundError("Appointment not found")
+        return appointment
 
     @staticmethod
     def find_scheduled_overlapping(
@@ -66,15 +76,13 @@ class AppointmentRepository:
             q = q.filter(Appointment.id > cursor)
         return q.limit(limit + 1).all()
 
-    _UPSERT_UPDATE_FIELDS = ("medspa_id", "start_time", "status", "total_price", "total_duration")
-
     @staticmethod
     def create_with_services(
         db: Session,
         appointment: Appointment,
         service_ids: builtins.list[str],
     ) -> Appointment:
-        """Insert a new appointment and its service links. For updates use upsert_by_id / upsert_by_id_with_services."""
+        """Insert a new appointment and its service links. For updates use update()."""
         db.add(appointment)
         db.flush()
         for service_id in service_ids:
@@ -87,66 +95,8 @@ class AppointmentRepository:
         return appointment
 
     @staticmethod
-    def sync_appointment_services(
-        db: Session, appointment_id: str, service_ids: builtins.list[str]
-    ) -> None:
-        """Update appointment-service links: remove ones not in service_ids, add new ones. Does not delete all and re-add."""
-        new_ids = set(service_ids)
-        rows = db.execute(
-            select(appointment_services_table.c.service_id).where(
-                appointment_services_table.c.appointment_id == appointment_id
-            )
-        ).fetchall()
-        existing_ids = {r[0] for r in rows}
-        to_delete = existing_ids - new_ids
-        to_insert = new_ids - existing_ids
-        if to_delete:
-            db.execute(
-                appointment_services_table.delete().where(
-                    appointment_services_table.c.appointment_id == appointment_id,
-                    appointment_services_table.c.service_id.in_(to_delete),
-                )
-            )
-        for service_id in to_insert:
-            db.execute(
-                appointment_services_table.insert().values(
-                    appointment_id=appointment_id,
-                    service_id=service_id,
-                )
-            )
-
-    @staticmethod
-    def upsert_by_id(db: Session, appointment: Appointment) -> Appointment:
-        """Insert if no row with appointment.id exists; otherwise update that row (scalar fields only, not service links). Returns the persisted entity."""
-        existing = AppointmentRepository.get_by_id(db, appointment.id)
-        if existing:
-            for key in AppointmentRepository._UPSERT_UPDATE_FIELDS:
-                setattr(existing, key, getattr(appointment, key))
-            return existing
-        db.add(appointment)
-        return appointment
-
-    @staticmethod
-    def upsert_by_id_with_services(
-        db: Session,
-        appointment: Appointment,
-        service_ids: builtins.list[str],
-    ) -> Appointment:
-        """Insert appointment + service links if id is new; otherwise update the row and replace service links. Returns the persisted entity."""
-        existing = AppointmentRepository.get_by_id(db, appointment.id)
-        if existing:
-            for key in AppointmentRepository._UPSERT_UPDATE_FIELDS:
-                setattr(existing, key, getattr(appointment, key))
-            AppointmentRepository.sync_appointment_services(db, existing.id, service_ids)
-            return existing
-
-        db.add(appointment)
+    def update(db: Session, appointment: Appointment) -> Appointment:
+        """Persist changes to an existing appointment. Reattaches if detached, then flushes."""
+        merged = db.merge(appointment)
         db.flush()
-        for service_id in service_ids:
-            db.execute(
-                appointment_services_table.insert().values(
-                    appointment_id=appointment.id,
-                    service_id=service_id,
-                )
-            )
-        return appointment
+        return merged

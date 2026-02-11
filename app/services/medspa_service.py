@@ -1,8 +1,10 @@
 from typing import Optional
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.database import transaction
+from app.exceptions import ConflictError
 from app.models.models import Medspa
 from app.repositories.medspa_repository import MedspaRepository
 from app.schemas.medspas import MedspaCreate
@@ -33,5 +35,9 @@ class MedspaService:
             phone_number=data.phone_number,
             email=data.email,
         )
-        with transaction(db):
-            return MedspaRepository.upsert_by_id(db, medspa)
+        try:
+            with transaction(db):
+                MedspaRepository.create(db, medspa)
+        except IntegrityError:
+            raise ConflictError(f"A medspa named '{data.name}' already exists") from None
+        return medspa

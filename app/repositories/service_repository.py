@@ -9,10 +9,6 @@ from app.models.models import Service
 
 class ServiceRepository:
     @staticmethod
-    def get_by_id(db: Session, id: str) -> Optional[Service]:
-        return db.query(Service).filter(Service.id == id).first()
-
-    @staticmethod
     def list_by_medspa_id(
         db: Session, medspa_id: str, cursor: Optional[str] = None, limit: int = 20
     ) -> list[Service]:
@@ -30,19 +26,13 @@ class ServiceRepository:
 
     @staticmethod
     def create(db: Session, service: Service) -> Service:
-        """Persist a new service. For updates use upsert_by_id()."""
+        """Persist a new service. For updates use update()."""
         db.add(service)
         return service
-
-    _UPSERT_UPDATE_FIELDS = ("medspa_id", "name", "description", "price", "duration")
 
     @staticmethod
-    def upsert_by_id(db: Session, service: Service) -> Service:
-        """Insert if no row with service.id exists; otherwise update that row. Returns the persisted entity."""
-        existing = ServiceRepository.get_by_id(db, service.id)
-        if existing:
-            for key in ServiceRepository._UPSERT_UPDATE_FIELDS:
-                setattr(existing, key, getattr(service, key))
-            return existing
-        db.add(service)
-        return service
+    def update(db: Session, service: Service) -> Service:
+        """Persist changes to an existing service. Reattaches if detached, then flushes."""
+        merged = db.merge(service)
+        db.flush()
+        return merged

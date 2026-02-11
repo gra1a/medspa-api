@@ -4,10 +4,10 @@
 -- Medspas: basic info
 CREATE TABLE IF NOT EXISTS medspas (
     id CHAR(26) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    address TEXT,
-    phone_number VARCHAR(50),
-    email VARCHAR(255),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    address TEXT NOT NULL,
+    phone_number VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -50,3 +50,27 @@ CREATE TABLE IF NOT EXISTS appointment_services (
 );
 CREATE INDEX IF NOT EXISTS idx_appointment_services_appointment_id ON appointment_services(appointment_id);
 CREATE INDEX IF NOT EXISTS idx_appointment_services_service_id ON appointment_services(service_id);
+
+-- Auto-update updated_at on row change (covers direct SQL, migrations, raw queries)
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_medspas_updated_at
+    BEFORE UPDATE ON medspas
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER trg_services_updated_at
+    BEFORE UPDATE ON services
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_updated_at();
+
+CREATE TRIGGER trg_appointments_updated_at
+    BEFORE UPDATE ON appointments
+    FOR EACH ROW
+    EXECUTE PROCEDURE update_updated_at();

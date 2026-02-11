@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Literal
+from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -7,15 +8,18 @@ if TYPE_CHECKING:
     from app.models.models import Appointment
 
 
-VALID_STATUSES = ("scheduled", "completed", "canceled")
-AppointmentStatus = Literal["scheduled", "completed", "canceled"]
+class AppointmentStatus(str, Enum):
+    SCHEDULED = "scheduled"
+    COMPLETED = "completed"
+    CANCELED = "canceled"
+
 
 # Valid status transitions: from_status -> set of allowed to_status
 # scheduled -> completed, canceled; completed and canceled are final (no transitions)
-VALID_STATUS_TRANSITIONS: dict[str, tuple[str, ...]] = {
-    "scheduled": ("completed", "canceled"),
-    "completed": (),  # final state
-    "canceled": (),  # final state
+VALID_STATUS_TRANSITIONS: dict[AppointmentStatus, tuple[AppointmentStatus, ...]] = {
+    AppointmentStatus.SCHEDULED: (AppointmentStatus.COMPLETED, AppointmentStatus.CANCELED),
+    AppointmentStatus.COMPLETED: (),  # final state
+    AppointmentStatus.CANCELED: (),  # final state
 }
 
 
@@ -56,7 +60,7 @@ class AppointmentResponse(BaseModel):
     id: str
     medspa_id: str
     start_time: datetime
-    status: str
+    status: AppointmentStatus
     total_price: int  # in cents
     total_duration: int
     services: list[ServiceInAppointment]
@@ -71,7 +75,7 @@ class AppointmentResponse(BaseModel):
             id=appointment.id,
             medspa_id=appointment.medspa_id,
             start_time=appointment.start_time,
-            status=appointment.status,
+            status=AppointmentStatus(appointment.status),
             total_price=appointment.total_price,
             total_duration=appointment.total_duration,
             services=services,

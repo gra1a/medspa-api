@@ -8,17 +8,6 @@ from app.utils.ulid import generate_id
 pytestmark = pytest.mark.unit
 
 
-def test_get_by_id_found(db_session: Session, sample_medspa: Medspa):
-    got = MedspaRepository.get_by_id(db_session, sample_medspa.id)
-    assert got is not None
-    assert got.id == sample_medspa.id
-    assert got.name == sample_medspa.name
-
-
-def test_get_by_id_not_found(db_session: Session):
-    assert MedspaRepository.get_by_id(db_session, generate_id()) is None
-
-
 def test_list_empty(db_session: Session):
     assert MedspaRepository.list(db_session, limit=10) == []
 
@@ -54,47 +43,13 @@ def test_add_persists_and_returns_medspa(db_session: Session):
         id=generate_id(),
         name="New MedSpa",
         address="456 St",
-        phone_number=None,
-        email=None,
+        phone_number="(512) 555-0199",
+        email="new@medspa.com",
     )
-    added = MedspaRepository.persist_new(db_session, medspa)
+    added = MedspaRepository.create(db_session, medspa)
     assert added.id is not None
     assert added.name == "New MedSpa"
     db_session.commit()
-    got = MedspaRepository.get_by_id(db_session, added.id)
+    got = db_session.get(Medspa, added.id)
     assert got is not None
     assert got.name == added.name
-
-
-def test_upsert_by_id_inserts_when_not_found(db_session: Session):
-    id_val = generate_id()
-    medspa = Medspa(
-        id=id_val, name="Upsert New", address="1 St", phone_number="111", email="a@b.com"
-    )
-    result = MedspaRepository.upsert_by_id(db_session, medspa)
-    assert result.id == id_val
-    assert result.name == "Upsert New"
-    db_session.commit()
-    got = MedspaRepository.get_by_id(db_session, id_val)
-    assert got is not None
-    assert got.name == "Upsert New"
-
-
-def test_upsert_by_id_updates_when_found(db_session: Session, sample_medspa: Medspa):
-    id_val = sample_medspa.id
-    updated = Medspa(
-        id=id_val,
-        name="Updated Name",
-        address="New Address",
-        phone_number="999",
-        email="new@example.com",
-    )
-    result = MedspaRepository.upsert_by_id(db_session, updated)
-    assert result.id == id_val
-    assert result.name == "Updated Name"
-    assert result.address == "New Address"
-    assert result.phone_number == "999"
-    assert result.email == "new@example.com"
-    got = MedspaRepository.get_by_id(db_session, id_val)
-    assert got is not None
-    assert got.name == "Updated Name"

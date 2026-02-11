@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.models.models import Medspa, Service
-from app.schemas.appointments import AppointmentCreate
+from app.schemas.appointments import AppointmentCreate, AppointmentStatus
 from app.services.appointment_service import AppointmentService
 from app.utils.ulid import generate_id
 
@@ -48,8 +48,8 @@ def test_create_appointment_service_from_other_medspa(
         id=generate_id(),
         name="Other MedSpa",
         address="Elsewhere",
-        phone_number=None,
-        email=None,
+        phone_number="(512) 555-0400",
+        email="other@medspa.com",
     )
     db_session.add(other_medspa)
     db_session.flush()
@@ -82,7 +82,9 @@ def test_list_appointments_filter_by_medspa_id(
 
 
 def test_list_appointments_filter_by_status(db_session: Session, sample_appointment):
-    items, _ = AppointmentService.list_appointments(db_session, status="scheduled", limit=20)
+    items, _ = AppointmentService.list_appointments(
+        db_session, status=AppointmentStatus.SCHEDULED, limit=20
+    )
     assert len(items) >= 1
     assert all(a.status == "scheduled" for a in items)
 
@@ -130,13 +132,17 @@ def test_create_appointment_raises_conflict_when_same_service_overlapping_window
 
 def test_update_status_scheduled_to_completed_succeeds(db_session: Session, sample_appointment):
     """Valid transition: scheduled -> completed."""
-    result = AppointmentService.update_status(db_session, sample_appointment.id, "completed")
+    result = AppointmentService.update_status(
+        db_session, sample_appointment.id, AppointmentStatus.COMPLETED
+    )
     assert result.status == "completed"
 
 
 def test_update_status_scheduled_to_canceled_succeeds(db_session: Session, sample_appointment):
     """Valid transition: scheduled -> canceled."""
-    result = AppointmentService.update_status(db_session, sample_appointment.id, "canceled")
+    result = AppointmentService.update_status(
+        db_session, sample_appointment.id, AppointmentStatus.CANCELED
+    )
     assert result.status == "canceled"
 
 
@@ -144,7 +150,9 @@ def test_update_status_same_status_returns_appointment_without_change(
     db_session: Session, sample_appointment
 ):
     """Same status as current returns success without persisting a change."""
-    result = AppointmentService.update_status(db_session, sample_appointment.id, "scheduled")
+    result = AppointmentService.update_status(
+        db_session, sample_appointment.id, AppointmentStatus.SCHEDULED
+    )
     assert result.id == sample_appointment.id
     assert result.status == "scheduled"
 
@@ -153,24 +161,30 @@ def test_update_status_completed_to_scheduled_raises_bad_request(
     db_session: Session, sample_appointment
 ):
     """Invalid transition: completed is final, cannot go back to scheduled."""
-    AppointmentService.update_status(db_session, sample_appointment.id, "completed")
+    AppointmentService.update_status(db_session, sample_appointment.id, AppointmentStatus.COMPLETED)
     with pytest.raises(BadRequestError, match="Invalid status transition"):
-        AppointmentService.update_status(db_session, sample_appointment.id, "scheduled")
+        AppointmentService.update_status(
+            db_session, sample_appointment.id, AppointmentStatus.SCHEDULED
+        )
 
 
 def test_update_status_canceled_to_completed_raises_bad_request(
     db_session: Session, sample_appointment
 ):
     """Invalid transition: canceled is final, cannot go to completed."""
-    AppointmentService.update_status(db_session, sample_appointment.id, "canceled")
+    AppointmentService.update_status(db_session, sample_appointment.id, AppointmentStatus.CANCELED)
     with pytest.raises(BadRequestError, match="Invalid status transition"):
-        AppointmentService.update_status(db_session, sample_appointment.id, "completed")
+        AppointmentService.update_status(
+            db_session, sample_appointment.id, AppointmentStatus.COMPLETED
+        )
 
 
 def test_update_status_completed_to_canceled_raises_bad_request(
     db_session: Session, sample_appointment
 ):
     """Invalid transition: completed -> canceled not allowed."""
-    AppointmentService.update_status(db_session, sample_appointment.id, "completed")
+    AppointmentService.update_status(db_session, sample_appointment.id, AppointmentStatus.COMPLETED)
     with pytest.raises(BadRequestError, match="Invalid status transition"):
-        AppointmentService.update_status(db_session, sample_appointment.id, "canceled")
+        AppointmentService.update_status(
+            db_session, sample_appointment.id, AppointmentStatus.CANCELED
+        )
