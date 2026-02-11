@@ -209,3 +209,124 @@ def test_create_appointment_same_time_different_service_returns_201(
         json={"start_time": start, "service_ids": [sample_services[1].id]},
     )
     assert r2.status_code == 201
+
+
+def test_list_medspa_appointments(client: TestClient, sample_appointment, sample_medspa):
+    """GET /medspas/{medspa_id}/appointments returns 200 with the medspa's appointments."""
+    r = client.get(f"/medspas/{sample_medspa.id}/appointments")
+    assert r.status_code == 200
+    data = r.json()
+    assert "items" in data
+    assert "limit" in data
+    assert "next_cursor" in data
+    ids = [a["id"] for a in data["items"]]
+    assert sample_appointment.id in ids
+    assert all(a["medspa_id"] == sample_medspa.id for a in data["items"])
+
+
+def test_list_medspa_appointments_not_found(client: TestClient):
+    """Returns 404 when medspa_id does not exist."""
+    r = client.get(f"/medspas/{generate_id()}/appointments")
+    assert r.status_code == 404
+
+
+def test_list_medspa_appointments_filters_by_medspa(client: TestClient, sample_medspa, sample_appointment):
+    """Nested endpoint returns only appointments for that medspa."""
+    # Create second medspa with its own service and appointment via API
+    r_medspa = client.post(
+        "/medspas",
+        json={
+            "name": "Other MedSpa",
+            "address": "456 Other St",
+            "phone_number": "512-555-9999",
+            "email": "other@test.com",
+        },
+    )
+    assert r_medspa.status_code == 201
+    medspa_b_id = r_medspa.json()["id"]
+    r_svc = client.post(
+        f"/medspas/{medspa_b_id}/services",
+        json={"name": "Other Service", "description": "", "price": 2000, "duration": 20},
+    )
+    assert r_svc.status_code == 201
+    svc_b_id = r_svc.json()["id"]
+    start = (datetime.now(timezone.utc) + timedelta(days=2)).replace(microsecond=0).isoformat()
+    r_appt = client.post(
+        f"/medspas/{medspa_b_id}/appointments",
+        json={"start_time": start, "service_ids": [svc_b_id]},
+    )
+    assert r_appt.status_code == 201
+    appt_b_id = r_appt.json()["id"]
+    # List for medspa A: only A's appointment
+    r_a = client.get(f"/medspas/{sample_medspa.id}/appointments")
+    assert r_a.status_code == 200
+    ids_a = [a["id"] for a in r_a.json()["items"]]
+    assert sample_appointment.id in ids_a
+    assert appt_b_id not in ids_a
+    # List for medspa B: only B's appointment
+    r_b = client.get(f"/medspas/{medspa_b_id}/appointments")
+    assert r_b.status_code == 200
+    ids_b = [a["id"] for a in r_b.json()["items"]]
+    assert appt_b_id in ids_b
+    assert sample_appointment.id not in ids_b
+
+
+def test_list_medspa_appointments_status_filter(client: TestClient, sample_medspa, sample_appointment):
+    """Nested endpoint respects status query param."""
+    r = client.get(
+        f"/medspas/{sample_medspa.id}/appointments",
+        params={"status": "scheduled"},
+    )
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert any(a["id"] == sample_appointment.id for a in items)
+    assert all(a["status"] == "scheduled" for a in items)
+    r_completed = client.get(
+        f"/medspas/{sample_medspa.id}/appointments",
+        params={"status": "completed"},
+    )
+    assert r_completed.status_code == 200
+    assert len(r_completed.json()["items"]) == 0
+    # Complete the appointment and query again
+    client.patch(f"/appointments/{sample_appointment.id}", json={"status": "completed"})
+    r_after = client.get(
+        f"/medspas/{sample_medspa.id}/appointments",
+        params={"status": "completed"},
+    )
+    assert r_after.status_code == 200
+    assert len(r_after.json()["items"]) == 1
+    assert r_after.json()["items"][0]["status"] == "completed"
+
+
+def test_list_appointments_returns_all_medspas(client: TestClient, sample_medspa, sample_appointment):
+    """GET /appointments without medspa_id returns appointments from all medspas."""
+    # Create second medspa with service and appointment via API
+    r_medspa = client.post(
+        "/medspas",
+        json={
+            "name": "Second MedSpa",
+            "address": "789 Second St",
+            "phone_number": "512-555-8888",
+            "email": "second@test.com",
+        },
+    )
+    assert r_medspa.status_code == 201
+    medspa2_id = r_medspa.json()["id"]
+    r_svc = client.post(
+        f"/medspas/{medspa2_id}/services",
+        json={"name": "Second Service", "description": "", "price": 1000, "duration": 15},
+    )
+    assert r_svc.status_code == 201
+    svc2_id = r_svc.json()["id"]
+    start = (datetime.now(timezone.utc) + timedelta(days=3)).replace(microsecond=0).isoformat()
+    r_appt = client.post(
+        f"/medspas/{medspa2_id}/appointments",
+        json={"start_time": start, "service_ids": [svc2_id]},
+    )
+    assert r_appt.status_code == 201
+    appt2_id = r_appt.json()["id"]
+    r = client.get("/appointments")
+    assert r.status_code == 200
+    ids = [a["id"] for a in r.json()["items"]]
+    assert sample_appointment.id in ids
+    assert appt2_id in ids

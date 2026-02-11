@@ -67,7 +67,7 @@ class AppointmentRepository:
         limit: int = 20,
     ) -> list[Appointment]:
         """Return up to limit+1 items ordered by id, after cursor (exclusive)."""
-        q = db.query(Appointment)
+        q = db.query(Appointment).options(selectinload(Appointment.services))
         if medspa_id is not None:
             q = q.filter(Appointment.medspa_id == medspa_id)
         if status is not None:
