@@ -230,7 +230,9 @@ def test_list_medspa_appointments_not_found(client: TestClient):
     assert r.status_code == 404
 
 
-def test_list_medspa_appointments_filters_by_medspa(client: TestClient, sample_medspa, sample_appointment):
+def test_list_medspa_appointments_filters_by_medspa(
+    client: TestClient, sample_medspa, sample_appointment
+):
     """Nested endpoint returns only appointments for that medspa."""
     # Create second medspa with its own service and appointment via API
     r_medspa = client.post(
@@ -271,7 +273,9 @@ def test_list_medspa_appointments_filters_by_medspa(client: TestClient, sample_m
     assert sample_appointment.id not in ids_b
 
 
-def test_list_medspa_appointments_status_filter(client: TestClient, sample_medspa, sample_appointment):
+def test_list_medspa_appointments_status_filter(
+    client: TestClient, sample_medspa, sample_appointment
+):
     """Nested endpoint respects status query param."""
     r = client.get(
         f"/medspas/{sample_medspa.id}/appointments",
@@ -298,7 +302,9 @@ def test_list_medspa_appointments_status_filter(client: TestClient, sample_medsp
     assert r_after.json()["items"][0]["status"] == "completed"
 
 
-def test_list_appointments_returns_all_medspas(client: TestClient, sample_medspa, sample_appointment):
+def test_list_appointments_returns_all_medspas(
+    client: TestClient, sample_medspa, sample_appointment
+):
     """GET /appointments without medspa_id returns appointments from all medspas."""
     # Create second medspa with service and appointment via API
     r_medspa = client.post(
