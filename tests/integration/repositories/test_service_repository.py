@@ -5,7 +5,7 @@ from app.models.models import Service
 from app.repositories.service_repository import ServiceRepository
 from app.utils.ulid import generate_id
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.integration
 
 
 def test_list_by_medspa_id_empty(db_session: Session, sample_medspa):

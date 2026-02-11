@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.exceptions import NotFoundError
 from app.models.models import Appointment, appointment_services_table
+from app.schemas.appointments import AppointmentStatus
 
 
 class AppointmentRepository:
@@ -47,7 +48,7 @@ class AppointmentRepository:
             )
             .filter(
                 Appointment.medspa_id == medspa_id,
-                Appointment.status == "scheduled",
+                Appointment.status == AppointmentStatus.SCHEDULED,
                 Appointment.start_time < end_time,
                 overlap_end,
                 appointment_services_table.c.service_id.in_(service_ids),

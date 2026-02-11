@@ -1,98 +1,145 @@
+"""Unit tests for MedspaService — all repository and external dependencies are mocked."""
+
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
+
 import pytest
-from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from app.exceptions import ConflictError, NotFoundError
 from app.models.models import Medspa
 from app.schemas.medspas import MedspaCreate
 from app.services.medspa_service import MedspaService
-from app.utils.ulid import generate_id
 
 pytestmark = pytest.mark.unit
 
-
-def test_get_medspa_found(db_session: Session, sample_medspa: Medspa):
-    got = MedspaService.get_medspa(db_session, sample_medspa.id)
-    assert got.id == sample_medspa.id
-    assert got.name == sample_medspa.name
+MEDSPA_ID = "01MYYYYYYYYYYYYYYYYYYYYYYYY"
+FAKE_ID = "01HXXXXXXXXXXXXXXXXXXXXXXX"
 
 
-def test_get_medspa_not_found(db_session: Session):
-    with pytest.raises(NotFoundError, match="Medspa not found"):
-        MedspaService.get_medspa(db_session, generate_id())
+@contextmanager
+def _noop_transaction(session):
+    yield session
 
 
-def test_list_medspas_empty(db_session: Session):
-    items, next_cursor = MedspaService.list_medspas(db_session, limit=20)
-    assert isinstance(items, list)
-    assert next_cursor is None
+def _make_medspa(id=MEDSPA_ID, name="Test MedSpa"):
+    m = MagicMock(spec=Medspa)
+    m.id = id
+    m.name = name
+    m.address = "123 Test St"
+    m.phone_number = "(512) 555-0100"
+    m.email = "test@test.com"
+    return m
 
 
-def test_list_medspas_returns_all(db_session: Session, sample_medspa: Medspa):
-    items, next_cursor = MedspaService.list_medspas(db_session, limit=20)
-    assert len(items) >= 1
-    ids = [m.id for m in items]
-    assert sample_medspa.id in ids
+# ---------------------------------------------------------------------------
+# get_medspa
+# ---------------------------------------------------------------------------
+class TestGetMedspa:
+    @patch("app.services.medspa_service.get_by_id")
+    def test_found(self, mock_get_by_id):
+        medspa = _make_medspa()
+        mock_get_by_id.return_value = medspa
+
+        db = MagicMock()
+        result = MedspaService.get_medspa(db, MEDSPA_ID)
+        assert result.id == MEDSPA_ID
+        assert result.name == "Test MedSpa"
+        mock_get_by_id.assert_called_once_with(db, Medspa, MEDSPA_ID, "Medspa not found")
+
+    @patch("app.services.medspa_service.get_by_id")
+    def test_not_found(self, mock_get_by_id):
+        mock_get_by_id.side_effect = NotFoundError("Medspa not found")
+
+        db = MagicMock()
+        with pytest.raises(NotFoundError, match="Medspa not found"):
+            MedspaService.get_medspa(db, MEDSPA_ID)
 
 
-def test_list_medspas_next_cursor_set_when_more_results(db_session: Session, multiple_medspas):
-    items, next_cursor = MedspaService.list_medspas(db_session, limit=2)
-    assert len(items) == 2
-    assert next_cursor is not None
-    assert next_cursor == items[1].id
+# ---------------------------------------------------------------------------
+# list_medspas
+# ---------------------------------------------------------------------------
+@patch("app.services.medspa_service.MedspaRepository")
+class TestListMedspas:
+    def test_empty(self, mock_repo):
+        mock_repo.list.return_value = []
+
+        db = MagicMock()
+        items, next_cursor = MedspaService.list_medspas(db, limit=20)
+        assert items == []
+        assert next_cursor is None
+
+    def test_returns_items(self, mock_repo):
+        medspa = _make_medspa()
+        mock_repo.list.return_value = [medspa]
+
+        db = MagicMock()
+        items, next_cursor = MedspaService.list_medspas(db, limit=20)
+        assert len(items) == 1
+        assert items[0].id == MEDSPA_ID
+        assert next_cursor is None
+
+    def test_next_cursor_set_when_more_results(self, mock_repo):
+        m1 = _make_medspa(id="01AAAAAAAAAAAAAAAAAAAAAAAAA")
+        m2 = _make_medspa(id="01BBBBBBBBBBBBBBBBBBBBBBBBB")
+        m3 = _make_medspa(id="01CCCCCCCCCCCCCCCCCCCCCCCCC")  # extra item signals more pages
+        mock_repo.list.return_value = [m1, m2, m3]
+
+        db = MagicMock()
+        items, next_cursor = MedspaService.list_medspas(db, limit=2)
+        assert len(items) == 2
+        assert next_cursor == "01BBBBBBBBBBBBBBBBBBBBBBBBB"
+
+    def test_next_cursor_none_when_no_more(self, mock_repo):
+        mock_repo.list.return_value = [_make_medspa()]
+
+        db = MagicMock()
+        items, next_cursor = MedspaService.list_medspas(db, limit=20)
+        assert len(items) == 1
+        assert next_cursor is None
+
+    def test_cursor_forwarded_to_repo(self, mock_repo):
+        mock_repo.list.return_value = []
+
+        db = MagicMock()
+        MedspaService.list_medspas(db, cursor="some-cursor", limit=10)
+        mock_repo.list.assert_called_once_with(db, cursor="some-cursor", limit=10)
 
 
-def test_list_medspas_next_cursor_none_when_no_more(db_session: Session, sample_medspa: Medspa):
-    items, next_cursor = MedspaService.list_medspas(db_session, limit=20)
-    assert len(items) >= 1
-    assert next_cursor is None
+# ---------------------------------------------------------------------------
+# create_medspa
+# ---------------------------------------------------------------------------
+@patch("app.services.medspa_service.transaction", _noop_transaction)
+@patch("app.services.medspa_service.generate_id", return_value=FAKE_ID)
+@patch("app.services.medspa_service.MedspaRepository")
+class TestCreateMedspa:
+    def test_success(self, mock_repo, _gen_id):
+        mock_repo.create.side_effect = lambda db, medspa: medspa
 
+        db = MagicMock()
+        data = MedspaCreate(
+            name="New MedSpa",
+            address="100 Main St",
+            phone_number="512-555-1234",
+            email="contact@example.com",
+        )
 
-def test_list_medspas_cursor_pagination_no_duplicates(db_session: Session, multiple_medspas):
-    page1, next_cursor = MedspaService.list_medspas(db_session, limit=2)
-    assert len(page1) == 2
-    assert next_cursor is not None
-    page2, next_cursor2 = MedspaService.list_medspas(db_session, cursor=next_cursor, limit=2)
-    assert len(page2) == 2
-    page1_ids = {m.id for m in page1}
-    page2_ids = {m.id for m in page2}
-    assert page1_ids.isdisjoint(page2_ids)
-    assert next_cursor2 is not None
-    page3, next_cursor3 = MedspaService.list_medspas(db_session, cursor=next_cursor2, limit=2)
-    assert len(page3) == 1
-    assert next_cursor3 is None
-    all_ids = page1_ids | page2_ids | {m.id for m in page3}
-    assert len(all_ids) == 5
+        result = MedspaService.create_medspa(db, data)
+        assert result.id == FAKE_ID
+        assert result.name == "New MedSpa"
+        assert result.address == "100 Main St"
+        mock_repo.create.assert_called_once()
 
+    def test_duplicate_name_raises_conflict(self, mock_repo, _gen_id):
+        mock_repo.create.side_effect = IntegrityError("stmt", {}, Exception("duplicate"))
 
-def test_create_medspa_success(db_session: Session):
-    data = MedspaCreate(
-        name="New MedSpa",
-        address="100 Main St",
-        phone_number="512-555-1234",
-        email="contact@example.com",
-    )
-    medspa = MedspaService.create_medspa(db_session, data)
-    assert medspa.id is not None
-    assert medspa.name == "New MedSpa"
-    assert medspa.address == "100 Main St"
-    got = MedspaService.get_medspa(db_session, medspa.id)
-    assert got.name == medspa.name
+        db = MagicMock()
+        data = MedspaCreate(
+            name="Duplicate MedSpa",
+            address="100 Main St",
+            phone_number="512-555-1234",
+            email="first@example.com",
+        )
 
-
-def test_create_medspa_duplicate_name_returns_conflict(db_session: Session):
-    data = MedspaCreate(
-        name="Duplicate MedSpa",
-        address="100 Main St",
-        phone_number="512-555-1234",
-        email="first@example.com",
-    )
-    MedspaService.create_medspa(db_session, data)
-
-    data2 = MedspaCreate(
-        name="Duplicate MedSpa",
-        address="200 Other St",
-        phone_number="512-555-5678",
-        email="second@example.com",
-    )
-    with pytest.raises(ConflictError, match="already exists"):
-        MedspaService.create_medspa(db_session, data2)
+        with pytest.raises(ConflictError, match="already exists"):
+            MedspaService.create_medspa(db, data)

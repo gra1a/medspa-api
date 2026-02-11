@@ -7,7 +7,7 @@ from app.models.models import Appointment, Service, appointment_services_table
 from app.repositories.appointment_repository import AppointmentRepository
 from app.utils.ulid import generate_id
 
-pytestmark = pytest.mark.unit
+pytestmark = pytest.mark.integration
 
 
 def test_list_no_filters(db_session: Session, sample_appointment: Appointment):
