@@ -24,6 +24,7 @@ select = [
 ignore = [
     "E501",   # line too long (handled by formatter)
     "UP007",  # keep Optional[X]; do not rewrite to X | None (for type checker compatibility)
+    "UP017",  # keep timezone.utc; do not rewrite to UTC
 ]
 
 [tool.ruff.lint.isort]
