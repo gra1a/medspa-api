@@ -1,10 +1,9 @@
 """Persistence only for Service aggregate. No business rules."""
 
-from typing import List, Optional
 
+from typing import Optional, List
 from sqlalchemy.orm import Session
 
-from app.db.database import transaction
 from app.models.models import Service
 
 
@@ -33,10 +32,15 @@ class ServiceRepository:
             return []
         return db.query(Service).filter(Service.id.in_(ids)).all()
 
+    @staticmethod
+    def create(db: Session, service: Service) -> Service:
+        """Persist a new service. For updates use upsert_by_id()."""
+        db.add(service)
+        return service
+
     _UPSERT_UPDATE_FIELDS = ("medspa_id", "name", "description", "price", "duration")
 
     @staticmethod
-    @transaction
     def upsert_by_id(db: Session, service: Service) -> Service:
         """Insert if no row with service.id exists; otherwise update that row. Returns the persisted entity."""
         existing = ServiceRepository.get_by_id(db, service.id)

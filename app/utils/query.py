@@ -1,4 +1,4 @@
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from sqlalchemy.orm import Session
 
@@ -9,7 +9,7 @@ T = TypeVar("T")
 
 def get_by_id(
     db: Session,
-    model: Type[T],
+    model: type[T],
     id: str,
     not_found_message: str = "Not found",
 ) -> T:

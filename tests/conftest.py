@@ -1,4 +1,5 @@
 import os
+from datetime import timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,7 +10,7 @@ from sqlalchemy.orm import sessionmaker
 # so local pytest works when test DB is running: docker-compose -f docker-compose.test.yml up -d
 from app.db.database import Base, get_db
 from app.main import app
-from app.models.models import Medspa, Service, Appointment, appointment_services_table
+from app.models.models import Appointment, Medspa, Service, appointment_services_table
 from app.utils.ulid import generate_id
 
 TEST_DATABASE_URL = os.environ.get(
@@ -141,7 +142,7 @@ def sample_services(db_session, sample_medspa):
 
 @pytest.fixture
 def sample_appointment(db_session, sample_medspa, sample_services):
-    from datetime import datetime, timezone
+    from datetime import datetime
     appt = Appointment(
         id=generate_id(),
         medspa_id=sample_medspa.id,
@@ -166,9 +167,9 @@ def sample_appointment(db_session, sample_medspa, sample_services):
 @pytest.fixture
 def multiple_appointments(db_session, sample_medspa, sample_services):
     """Create 4 appointments for pagination tests."""
-    from datetime import datetime, timezone
+    from datetime import datetime
     appts = []
-    for i in range(4):
+    for _ in range(4):
         appt = Appointment(
             id=generate_id(),
             medspa_id=sample_medspa.id,

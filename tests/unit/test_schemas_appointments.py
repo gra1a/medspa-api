@@ -1,14 +1,14 @@
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
-pytestmark = pytest.mark.unit
-
 from app.schemas.appointments import AppointmentCreate
+
+pytestmark = pytest.mark.unit
 
 
 def test_appointment_create_naive_future_datetime_treated_as_utc():
-    """Covers validator branch where tzinfo is None: replace with UTC then validate."""
+    """Covers validator branch where tzinfo is None: replace with timezone.utc then validate."""
     naive_future = (datetime.now(timezone.utc) + timedelta(days=1)).replace(tzinfo=None)
     data = AppointmentCreate(start_time=naive_future, service_ids=["01ARZ3NDEKTSV4RRFFQ69G5FAV"])
     assert data.start_time.tzinfo is not None

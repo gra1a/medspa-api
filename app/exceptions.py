@@ -19,3 +19,10 @@ class BadRequestError(AppException):
 
     def __init__(self, detail: str):
         super().__init__(detail=detail, status_code=400)
+
+
+class ConflictError(AppException):
+    """Raise when the request conflicts with current resource state (HTTP 409)."""
+
+    def __init__(self, detail: str = "One or more services are already booked for this time slot."):
+        super().__init__(detail=detail, status_code=409)

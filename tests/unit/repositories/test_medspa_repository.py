@@ -1,11 +1,11 @@
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.unit
-
 from app.models.models import Medspa
 from app.repositories.medspa_repository import MedspaRepository
 from app.utils.ulid import generate_id
+
+pytestmark = pytest.mark.unit
 
 
 def test_get_by_id_found(db_session: Session, sample_medspa: Medspa):
@@ -60,6 +60,7 @@ def test_add_persists_and_returns_medspa(db_session: Session):
     added = MedspaRepository.persist_new(db_session, medspa)
     assert added.id is not None
     assert added.name == "New MedSpa"
+    db_session.commit()
     got = MedspaRepository.get_by_id(db_session, added.id)
     assert got is not None
     assert got.name == added.name
@@ -71,7 +72,10 @@ def test_upsert_by_id_inserts_when_not_found(db_session: Session):
     result = MedspaRepository.upsert_by_id(db_session, medspa)
     assert result.id == id_val
     assert result.name == "Upsert New"
-    assert MedspaRepository.get_by_id(db_session, id_val).name == "Upsert New"
+    db_session.commit()
+    got = MedspaRepository.get_by_id(db_session, id_val)
+    assert got is not None
+    assert got.name == "Upsert New"
 
 
 def test_upsert_by_id_updates_when_found(db_session: Session, sample_medspa: Medspa):
@@ -90,4 +94,5 @@ def test_upsert_by_id_updates_when_found(db_session: Session, sample_medspa: Med
     assert result.phone_number == "999"
     assert result.email == "new@example.com"
     got = MedspaRepository.get_by_id(db_session, id_val)
+    assert got is not None
     assert got.name == "Updated Name"

@@ -1,7 +1,8 @@
-from typing import List, Optional, Tuple
 
 from sqlalchemy.orm import Session
+from typing import Optional, Tuple, List
 
+from app.db.database import transaction
 from app.models.models import Medspa
 from app.repositories.medspa_repository import MedspaRepository
 from app.schemas.medspas import MedspaCreate
@@ -32,4 +33,5 @@ class MedspaService:
             phone_number=data.phone_number,
             email=data.email,
         )
-        return MedspaRepository.upsert_by_id(db, medspa)
+        with transaction(db):
+            return MedspaRepository.upsert_by_id(db, medspa)

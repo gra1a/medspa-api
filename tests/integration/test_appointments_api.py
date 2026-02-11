@@ -76,6 +76,16 @@ def test_patch_appointment_status(client: TestClient, sample_appointment):
     assert r.json()["status"] == "completed"
 
 
+def test_patch_appointment_same_status_returns_200(client: TestClient, sample_appointment):
+    """PATCH with same status as current returns 200 and leaves appointment unchanged."""
+    r = client.patch(
+        f"/appointments/{sample_appointment.id}",
+        json={"status": "scheduled"},
+    )
+    assert r.status_code == 200
+    assert r.json()["status"] == "scheduled"
+
+
 def test_patch_appointment_invalid_status_returns_422(client: TestClient, sample_appointment):
     r = client.patch(
         f"/appointments/{sample_appointment.id}",
@@ -89,6 +99,22 @@ def test_patch_appointment_no_status_returns_422(client: TestClient, sample_appo
         f"/appointments/{sample_appointment.id}",
     )
     assert r.status_code == 422
+
+
+def test_patch_appointment_invalid_transition_returns_400(client: TestClient, sample_appointment):
+    """Completed and canceled are final; transitioning back to scheduled returns 400."""
+    r = client.patch(
+        f"/appointments/{sample_appointment.id}",
+        json={"status": "completed"},
+    )
+    assert r.status_code == 200
+    r = client.patch(
+        f"/appointments/{sample_appointment.id}",
+        json={"status": "scheduled"},
+    )
+    assert r.status_code == 400
+    assert "detail" in r.json()
+    assert "Invalid status transition" in r.json()["detail"]
 
 
 def test_list_appointments(client: TestClient, sample_appointment):
@@ -138,3 +164,38 @@ def test_list_appointments_pagination_ordered_by_id(client: TestClient, multiple
     items = r.json()["items"]
     ids = [a["id"] for a in items]
     assert ids == sorted(ids)
+
+
+def test_create_appointment_same_service_overlapping_returns_409(
+    client: TestClient, sample_medspa, sample_service
+):
+    """POST at time T with service S -> 201; second POST at overlapping time with same service S -> 409."""
+    start = (datetime.now(timezone.utc) + timedelta(days=1)).replace(microsecond=0).isoformat()
+    r1 = client.post(
+        f"/medspas/{sample_medspa.id}/appointments",
+        json={"start_time": start, "service_ids": [sample_service.id]},
+    )
+    assert r1.status_code == 201
+    r2 = client.post(
+        f"/medspas/{sample_medspa.id}/appointments",
+        json={"start_time": start, "service_ids": [sample_service.id]},
+    )
+    assert r2.status_code == 409
+    assert "conflict" in r2.json().get("detail", "").lower() or "booked" in r2.json().get("detail", "").lower()
+
+
+def test_create_appointment_same_time_different_service_returns_201(
+    client: TestClient, sample_medspa, sample_services
+):
+    """POST at same time T with a different service (same medspa) -> 201 (no conflict)."""
+    start = (datetime.now(timezone.utc) + timedelta(days=1)).replace(microsecond=0).isoformat()
+    r1 = client.post(
+        f"/medspas/{sample_medspa.id}/appointments",
+        json={"start_time": start, "service_ids": [sample_services[0].id]},
+    )
+    assert r1.status_code == 201
+    r2 = client.post(
+        f"/medspas/{sample_medspa.id}/appointments",
+        json={"start_time": start, "service_ids": [sample_services[1].id]},
+    )
+    assert r2.status_code == 201

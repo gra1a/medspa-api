@@ -1,7 +1,8 @@
-from typing import List, Optional
 
 from sqlalchemy.orm import Session
+from typing import Optional, List
 
+from app.db.database import transaction
 from app.models.models import Service
 from app.repositories.service_repository import ServiceRepository
 from app.schemas.services import ServiceCreate, ServiceUpdate
@@ -22,7 +23,8 @@ class OfferingsService:
             price=data.price,
             duration=data.duration,
         )
-        return ServiceRepository.upsert_by_id(db, service)
+        with transaction(db):
+            return ServiceRepository.create(db, service)
 
     @staticmethod
     def get_service(db: Session, id: str) -> Service:
@@ -45,4 +47,5 @@ class OfferingsService:
         allowed = {"name", "description", "price", "duration"}
         for key in allowed & update.keys():
             setattr(service, key, update[key])
-        return ServiceRepository.upsert_by_id(db, service)
+        with transaction(db):
+            return ServiceRepository.upsert_by_id(db, service)

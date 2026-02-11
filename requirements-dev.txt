@@ -1,5 +1,8 @@
-pytest
-pytest-asyncio
-httpx
-faker
-pytest-cov
+# Dev dependencies; ~= allows compatible patch/minor updates.
+pytest~=8.3.0
+pytest-asyncio~=0.24.0
+httpx~=0.28.0
+faker~=33.1.0
+pytest-cov~=6.0.0
+ruff~=0.8.0
+pyright~=1.1.0

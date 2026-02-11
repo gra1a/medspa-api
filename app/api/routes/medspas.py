@@ -3,16 +3,19 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.schemas.medspas import MedspaCreate, MedspaResponse
-from app.schemas.pagination import PaginatedResponse, get_pagination, PaginationParams
+from app.schemas.pagination import PaginatedResponse, PaginationParams, get_pagination
 from app.services.medspa_service import MedspaService
 
 router = APIRouter(tags=["medspas"])
 
+_depends_get_db = Depends(get_db)
+_depends_get_pagination = Depends(get_pagination)
+
 
 @router.get("", response_model=PaginatedResponse[MedspaResponse])
 def list_medspas(
-    db: Session = Depends(get_db),
-    pagination: PaginationParams = Depends(get_pagination),
+    db: Session = _depends_get_db,
+    pagination: PaginationParams = _depends_get_pagination,
 ):
     items, next_cursor = MedspaService.list_medspas(
         db, cursor=pagination.cursor, limit=pagination.limit
@@ -25,12 +28,12 @@ def list_medspas(
 
 
 @router.get("/{medspa_id}", response_model=MedspaResponse)
-def get_medspa(medspa_id: str, db: Session = Depends(get_db)):
+def get_medspa(medspa_id: str, db: Session = _depends_get_db):
     medspa = MedspaService.get_medspa(db, medspa_id)
     return MedspaResponse.from_medspa(medspa)
 
 
 @router.post("", response_model=MedspaResponse, status_code=201)
-def create_medspa(data: MedspaCreate, db: Session = Depends(get_db)):
+def create_medspa(data: MedspaCreate, db: Session = _depends_get_db):
     medspa = MedspaService.create_medspa(db, data)
     return MedspaResponse.from_medspa(medspa)

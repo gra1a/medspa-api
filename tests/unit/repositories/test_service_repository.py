@@ -1,11 +1,11 @@
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.unit
-
 from app.models.models import Service
 from app.repositories.service_repository import ServiceRepository
 from app.utils.ulid import generate_id
+
+pytestmark = pytest.mark.unit
 
 
 def test_get_by_id_found(db_session: Session, sample_service: Service):
@@ -66,6 +66,7 @@ def test_add_persists_and_returns_service(db_session: Session, sample_medspa):
     added = ServiceRepository.upsert_by_id(db_session, service)
     assert added.id is not None
     assert added.name == "Repo Service"
+    db_session.commit()
     got = ServiceRepository.get_by_id(db_session, added.id)
     assert got is not None
     assert got.price == 9900

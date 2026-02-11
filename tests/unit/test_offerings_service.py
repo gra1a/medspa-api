@@ -1,13 +1,13 @@
 import pytest
 from sqlalchemy.orm import Session
 
-pytestmark = pytest.mark.unit
-
 from app.exceptions import NotFoundError
 from app.models.models import Medspa, Service
 from app.schemas.services import ServiceCreate, ServiceUpdate
 from app.services.offerings_service import OfferingsService
 from app.utils.ulid import generate_id
+
+pytestmark = pytest.mark.unit
 
 
 def test_create_service_success(db_session: Session, sample_medspa: Medspa):

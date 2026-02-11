@@ -1,6 +1,6 @@
 """Cursor-based pagination: cursor + limit, response with next_cursor."""
 
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from fastapi import Query
 from pydantic import BaseModel
@@ -29,6 +29,6 @@ def get_pagination(
 class PaginatedResponse(BaseModel, Generic[T]):
     """Response for cursor-paginated lists: items, next_cursor (if more), limit."""
 
-    items: List[T]
+    items: list[T]
     next_cursor: Optional[str] = None
     limit: int

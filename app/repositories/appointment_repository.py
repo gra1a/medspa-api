@@ -1,11 +1,11 @@
 """Persistence only for Appointment aggregate. No business rules."""
 
-from typing import List, Optional
+from typing import Optional, List
+from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.db.database import transaction
 from app.models.models import Appointment, appointment_services_table
 
 
@@ -13,6 +13,35 @@ class AppointmentRepository:
     @staticmethod
     def get_by_id(db: Session, id: str) -> Optional[Appointment]:
         return db.query(Appointment).filter(Appointment.id == id).first()
+
+    @staticmethod
+    def find_scheduled_overlapping(
+        db: Session,
+        medspa_id: str,
+        start_time: datetime,
+        end_time: datetime,
+        service_ids: list[str],
+    ) -> List[Appointment]:
+        """Return scheduled appointments at this medspa that overlap [start_time, end_time) and use any of the given services."""
+        if not service_ids:
+            return []
+        overlap_end = text(
+            "appointments.start_time + (appointments.total_duration * interval '1 minute') > :start_time"
+        )
+        return (
+            db.query(Appointment)
+            .join(appointment_services_table, Appointment.id == appointment_services_table.c.appointment_id)
+            .filter(
+                Appointment.medspa_id == medspa_id,
+                Appointment.status == "scheduled",
+                Appointment.start_time < end_time,
+                overlap_end,
+                appointment_services_table.c.service_id.in_(service_ids),
+            )
+            .params(start_time=start_time)
+            .distinct()
+            .all()
+        )
 
     @staticmethod
     def list(
@@ -34,6 +63,24 @@ class AppointmentRepository:
         return q.limit(limit + 1).all()
 
     _UPSERT_UPDATE_FIELDS = ("medspa_id", "start_time", "status", "total_price", "total_duration")
+
+    @staticmethod
+    def create_with_services(
+        db: Session,
+        appointment: Appointment,
+        service_ids: List[str],
+    ) -> Appointment:
+        """Insert a new appointment and its service links. For updates use upsert_by_id / upsert_by_id_with_services."""
+        db.add(appointment)
+        db.flush()
+        for service_id in service_ids:
+            db.execute(
+                appointment_services_table.insert().values(
+                    appointment_id=appointment.id,
+                    service_id=service_id,
+                )
+            )
+        return appointment
 
     @staticmethod
     def sync_appointment_services(db: Session, appointment_id: str, service_ids: List[str]) -> None:
@@ -63,7 +110,6 @@ class AppointmentRepository:
             )
 
     @staticmethod
-    @transaction
     def upsert_by_id(db: Session, appointment: Appointment) -> Appointment:
         """Insert if no row with appointment.id exists; otherwise update that row (scalar fields only, not service links). Returns the persisted entity."""
         existing = AppointmentRepository.get_by_id(db, appointment.id)
@@ -75,7 +121,6 @@ class AppointmentRepository:
         return appointment
 
     @staticmethod
-    @transaction
     def upsert_by_id_with_services(
         db: Session,
         appointment: Appointment,

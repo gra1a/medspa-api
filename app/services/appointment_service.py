@@ -1,16 +1,25 @@
-from datetime import datetime, timezone
-from typing import List, Optional
+import logging
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
+from typing import List, Optional
 
-from app.exceptions import BadRequestError, NotFoundError
+
+from app.db.database import transaction
+from app.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.models.models import Appointment
 from app.repositories.appointment_repository import AppointmentRepository
 from app.repositories.service_repository import ServiceRepository
-from app.schemas.appointments import AppointmentCreate, AppointmentStatus
+from app.schemas.appointments import (
+    VALID_STATUS_TRANSITIONS,
+    AppointmentCreate,
+    AppointmentStatus,
+)
 from app.services.medspa_service import MedspaService
 from app.utils.query import get_by_id
 from app.utils.ulid import generate_id
+
+logger = logging.getLogger(__name__)
 
 
 class AppointmentService:
@@ -38,6 +47,12 @@ class AppointmentService:
 
         total_price = sum(s.price for s in services)
         total_duration = sum(s.duration for s in services)
+        end_time = start + timedelta(minutes=total_duration)
+        overlapping = AppointmentRepository.find_scheduled_overlapping(
+            db, medspa.id, start, end_time, [s.id for s in services]
+        )
+        if overlapping:
+            raise ConflictError("One or more services are already booked for this time slot.")
 
         appointment = Appointment(
             id=generate_id(),
@@ -47,9 +62,17 @@ class AppointmentService:
             total_price=total_price,
             total_duration=total_duration,
         )
-        return AppointmentRepository.upsert_by_id_with_services(
-            db, appointment, [s.id for s in services]
+        with transaction(db):
+            created = AppointmentRepository.create_with_services(
+                db, appointment, [s.id for s in services]
+            )
+        logger.info(
+            "appointment_created appointment_id=%s medspa_id=%s start_time=%s",
+            created.id,
+            medspa_id,
+            data.start_time.isoformat(),
         )
+        return created
 
     @staticmethod
     def get_appointment(db: Session, id: str) -> Appointment:
@@ -58,8 +81,25 @@ class AppointmentService:
     @staticmethod
     def update_status(db: Session, appointment_id: str, status: AppointmentStatus) -> Appointment:
         appointment = AppointmentService.get_appointment(db, appointment_id)
-        setattr(appointment, "status", status)
-        return AppointmentRepository.upsert_by_id(db, appointment)
+        current = appointment.status
+        if status == current:
+            return appointment
+        allowed = VALID_STATUS_TRANSITIONS.get(current, ())
+        if status not in allowed:
+            raise BadRequestError(
+                f"Invalid status transition: cannot change appointment from '{current}' to '{status}'. "
+                f"Allowed transitions from '{current}': {list(allowed) or 'none (final state)'}."
+            )
+        appointment.status = status
+        with transaction(db):
+            updated = AppointmentRepository.upsert_by_id(db, appointment)
+        logger.info(
+            "appointment_status_updated appointment_id=%s from=%s to=%s",
+            appointment_id,
+            current,
+            status,
+        )
+        return updated
 
     @staticmethod
     def list_appointments(

@@ -1,10 +1,9 @@
 """Persistence only for Medspa aggregate. No business rules."""
 
-from typing import List, Optional
 
+from typing import Optional, List
 from sqlalchemy.orm import Session
 
-from app.db.database import transaction
 from app.models.models import Medspa
 
 
@@ -22,7 +21,6 @@ class MedspaRepository:
         return q.limit(limit + 1).all()
 
     @staticmethod
-    @transaction
     def persist_new(db: Session, medspa: Medspa) -> Medspa:
         """Persist a new medspa. For updates to existing entities use persist()."""
         db.add(medspa)
@@ -31,7 +29,6 @@ class MedspaRepository:
     _UPSERT_UPDATE_FIELDS = ("name", "address", "phone_number", "email")
 
     @staticmethod
-    @transaction
     def upsert_by_id(db: Session, medspa: Medspa) -> Medspa:
         """Insert if no row with medspa.id exists; otherwise update that row. Returns the persisted entity."""
         existing = MedspaRepository.get_by_id(db, medspa.id)
